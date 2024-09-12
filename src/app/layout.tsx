@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="jp">
+    <html lang="jp" className="bg-gray-800">
       <body className={inter.className}>
       <ChakraProvider>
         {children}
