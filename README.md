@@ -12,6 +12,6 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
-
-
+- react-hook-form
+- @hookform/resolvers zod
 
