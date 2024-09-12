@@ -1,9 +1,10 @@
 "use client"
 
-import {Box, FormControl, FormErrorMessage, FormLabel, Heading, Input, Stack} from "@chakra-ui/react";
+import {Box, FormControl, FormErrorMessage, FormLabel, Heading, Input, Link} from "@chakra-ui/react";
 import {useForm} from "react-hook-form";
 import {yupResolver} from "@hookform/resolvers/yup";
 import {registerSchema, registerType} from "@/components/YupSchema";
+import axios from "axios";
 
 
 export default function RegisterForm(){
@@ -12,7 +13,8 @@ export default function RegisterForm(){
     const {
         register,
         handleSubmit,
-        formState: {errors, isSubmitting}
+        formState: {errors, isSubmitting},
+        getValues,
     } = useForm<registerType>({
         resolver: yupResolver(registerSchema), // Yupと紐付け
         mode: "onBlur", // onChange, onBlur, onSubmit, onTouched, allが選択可能
@@ -23,17 +25,34 @@ export default function RegisterForm(){
         return;
     }
 
+    //アカウントIDの取得
+    async function getAccountID(username: string) {
+        const response = await axios.post('http://localhost:3000/api/getAccountID', {username});
+        return response.data.message as string;
+    }
+
     return(
         <div className="text-slate-100 bg-gray-800">
+
             <Box m={4} className="max-w-full">
                 <form onSubmit={()=>{}}>
-                    {/* チーム名 */}
 
-                    {/* チーム略名 */}
+                    {/* チーム概要 */}
+                    <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto">
+                        <Heading size="lg" className="text-center border-b-2 border-slate-400 mt-2 mx-4">チーム概要</Heading>
+                        <div className="mx-auto w-4/5">
 
-                    {/* チームロゴ 今はパス */}
+                            {/* チーム名 */}
 
-                    {/* 代表者連絡先 */}
+                            {/* チーム略名 */}
+
+                            {/* チームロゴ 今はパス */}
+
+                            {/* 代表者連絡先 */}
+
+                        </div>
+
+                    </Box>
 
                     {/* 出場者 */}
                     <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto">
