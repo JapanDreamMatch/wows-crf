@@ -4,6 +4,7 @@ import axios from "axios";
 export const registerSchema = object({
     teamName: string(),
     teamNickname: string(),
+    teamLogo: object(),
     contact: string(),
     player1: string(),
     player2: string(),
@@ -15,7 +16,7 @@ export const registerSchema = object({
     player8: string(),
     player9: string(),
     player10: string(),
-    other: string()
+    comment: string()
 })
 export type registerType = yup.InferType<typeof registerSchema>;
 
