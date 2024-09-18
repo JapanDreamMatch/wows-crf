@@ -1,5 +1,6 @@
 import yup, {object, string} from "yup";
 import axios from "axios";
+import {SubmitHandler} from "react-hook-form";
 
 export const registerSchema = object({
     teamName: string(),
@@ -21,9 +22,8 @@ export const registerSchema = object({
 export type registerType = yup.InferType<typeof registerSchema>;
 
 //送信ボタンの動作
-export async function onSubmit(formData: registerType){
-
-    const res = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/register`, {
+export const onSubmit: SubmitHandler<registerType> = async (formData) => {
+    const res = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/register`, {
         teamName: formData.teamName,
         teamNickName: formData.teamNickname,
         teamLogo: formData.teamLogo ?? undefined,
@@ -41,34 +41,11 @@ export async function onSubmit(formData: registerType){
         comment: formData.comment ?? ""
     });
 
-    return;
+    return res.data.message as string;
 }
 
-//テスト
-export async function testSubmit(){
-    console.log("sendTo: " + `${process.env.NEXT_PUBLIC_PAGE_URL}/api/register`);
-    const resTest = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/register`, {
-        teamName:"teamName",
-        teamNickName: "teamNickname",
-        teamLogo: undefined,
-        contact: "Sea#1234",
-        ign1: "Seaoftrees08",
-        ign2: "p_usuke",
-        ign3: "HAATKA",
-        ign4: "ZUIHO_Aoi",
-        ign5: "Crambom",
-        ign6: "",
-        ign7: "",
-        ign8: "",
-        ign9: "",
-        ign10: "",
-        comment: "NoComment"
+export const testSubmit: SubmitHandler<registerType> = async (formData) => {
+    return new Promise<void>((resolve) => {
+        setTimeout(() => resolve(), 1000);
     });
-
-}
-
-//アカウントIDの取得
-export async function getAccountID(username: string) {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/getAccountID`, {username});
-    return response.data.message as string;
 }

@@ -2,7 +2,7 @@
 
 import {Box, Button, Heading} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
-import {registerType, onSubmit, testSubmit} from "@/app/register/components/RegisterForm/useRegisterForm";
+import {registerType, onSubmit} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamNameInput from "@/app/register/components/TeamNameInput";
 import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
@@ -10,6 +10,8 @@ import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import {JdmDiscordLink} from "@/components/JdmDiscordLink";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
+import {useEffect} from "react";
+import {useRouter} from "next/navigation";
 
 
 export default function RegisterForm(){
@@ -18,17 +20,22 @@ export default function RegisterForm(){
     const methods  = useForm<registerType>({
         mode: "onBlur", // onChange, onBlur, onSubmit, onTouched, allが選択可能
     });
-    const {errors, isSubmitting} = methods.formState;
+    const {errors,
+        isSubmitting,
+        isSubmitSuccessful
+    } = methods.formState;
+    const router = useRouter();
+
+    const isTest = true;
+
+    useEffect(() => {
+        if(isSubmitSuccessful){
+            router.push('/success')
+        }
+    }, [isSubmitSuccessful]);
 
     return(
         <div className="text-slate-100 bg-gray-800">
-            <Button
-                colorScheme='teal'
-                size='lg'
-                onClick={testSubmit}
-            >
-                テストボタン
-            </Button>
 
             <Box m={4} className="max-w-full">
 
@@ -99,7 +106,7 @@ export default function RegisterForm(){
                                     label="出場者1 (代表者)"
                                     rhfName={"player1"}
                                     errorMsg={errors.player1 && errors.player1.message}
-                                    canEmpty={false}
+                                    canEmpty={false || isTest}
                                 />
 
                                 {/* 出場者2 */}
@@ -107,7 +114,7 @@ export default function RegisterForm(){
                                     label="出場者2"
                                     rhfName={"player2"}
                                     errorMsg={errors.player2 && errors.player2.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者3 */}
@@ -115,7 +122,7 @@ export default function RegisterForm(){
                                     label="出場者3"
                                     rhfName={"player3"}
                                     errorMsg={errors.player3 && errors.player3.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者4 */}
@@ -123,7 +130,7 @@ export default function RegisterForm(){
                                     label="出場者4"
                                     rhfName={"player4"}
                                     errorMsg={errors.player4 && errors.player4.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者5 */}
@@ -131,7 +138,7 @@ export default function RegisterForm(){
                                     label="出場者5"
                                     rhfName={"player5"}
                                     errorMsg={errors.player5 && errors.player5.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者6 */}
@@ -139,7 +146,7 @@ export default function RegisterForm(){
                                     label="出場者6"
                                     rhfName={"player6"}
                                     errorMsg={errors.player6 && errors.player6.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者7 */}
@@ -147,7 +154,7 @@ export default function RegisterForm(){
                                     label="出場者7"
                                     rhfName={"player7"}
                                     errorMsg={errors.player7 && errors.player7.message}
-                                    canEmpty={false}
+                                    canEmpty={false|| isTest}
                                 />
 
                                 {/* 出場者8 (補欠) */}
@@ -191,13 +198,21 @@ export default function RegisterForm(){
                         </Box>
 
                         {/* 送信ボタン */}
-                        <Button
-                            colorScheme='teal'
-                            size='lg'
-                            type="submit"
-                        >
-                            送信
-                        </Button>
+                        <Box borderWidth='0px'
+                             className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex items-center justify-center">
+                            <Button
+                                colorScheme='teal'
+                                size='lg'
+                                type="submit"
+                                className="mx-auto"
+                                disabled={isSubmitting}
+                                isLoading={isSubmitting}
+                            >
+                                {isSubmitting && <span className="spinner-border spinner-border-sm mr-1"></span>}
+                                送信
+                            </Button>
+                            <p>isSubmitting: {isSubmitting ? "true" : "false"}</p>
+                        </Box>
 
                     </form>
                 </FormProvider>
