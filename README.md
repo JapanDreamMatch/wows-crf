@@ -14,10 +14,19 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
 - react-hook-form
 - yup
+- axios
+- google-auth-library
+- google-spreadsheet
 
 # .env.local
 次の内容を記載してます。各自とってきてください。  
 ```.ini
-WOWS_API_APP_ID="あぷりけーしょんあいでぃー"
+WOWS_API_APP_ID="appid"
+NEXT_PUBLIC_PAGE_URL="http://localhost:3000"
+DISCORD_LINK="http://discord.gg/"
+REGISTER_SHEET_ID='sheetid'
+GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
+GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
+
 ```
 
