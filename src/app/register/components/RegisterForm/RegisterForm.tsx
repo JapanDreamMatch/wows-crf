@@ -30,7 +30,7 @@ export default function RegisterForm(){
         if(isSubmitSuccessful){
             router.push('/success')
         }
-    }, [isSubmitSuccessful]);
+    }, [isSubmitSuccessful, router]);
 
     return(
         <div className="text-slate-100 bg-gray-800">
@@ -209,7 +209,6 @@ export default function RegisterForm(){
                                 {isSubmitting && <span className="spinner-border spinner-border-sm mr-1"></span>}
                                 送信
                             </Button>
-                            <p>isSubmitting: {isSubmitting ? "true" : "false"}</p>
                         </Box>
 
                     </form>

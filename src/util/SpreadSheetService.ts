@@ -68,9 +68,8 @@ export class GoogleSpreadsheetService {
      * 行を取得する。
      *
      * @param sheetTitle シート名
-     * @param header 項目を取得するヘッダーを指定する
      */
-    async getRows(sheetTitle: string, header: string[]) {
+    async getRows(sheetTitle: string) {
         const sheet = this.doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) {
@@ -83,6 +82,7 @@ export class GoogleSpreadsheetService {
      * sheet名の一覧を取得する。
      */
     async getSheetNames(): Promise<string[]> {
+        await this.doc.loadInfo();
         return this.doc.sheetsByIndex.map((sheet) => sheet.title);
     }
 }
