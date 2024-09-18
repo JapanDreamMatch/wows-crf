@@ -26,8 +26,6 @@ export default function RegisterForm(){
     } = methods.formState;
     const router = useRouter();
 
-    const isTest = true;
-
     useEffect(() => {
         if(isSubmitSuccessful){
             router.push('/success')
@@ -106,7 +104,7 @@ export default function RegisterForm(){
                                     label="出場者1 (代表者)"
                                     rhfName={"player1"}
                                     errorMsg={errors.player1 && errors.player1.message}
-                                    canEmpty={false || isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者2 */}
@@ -114,7 +112,7 @@ export default function RegisterForm(){
                                     label="出場者2"
                                     rhfName={"player2"}
                                     errorMsg={errors.player2 && errors.player2.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者3 */}
@@ -122,7 +120,7 @@ export default function RegisterForm(){
                                     label="出場者3"
                                     rhfName={"player3"}
                                     errorMsg={errors.player3 && errors.player3.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者4 */}
@@ -130,7 +128,7 @@ export default function RegisterForm(){
                                     label="出場者4"
                                     rhfName={"player4"}
                                     errorMsg={errors.player4 && errors.player4.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者5 */}
@@ -138,7 +136,7 @@ export default function RegisterForm(){
                                     label="出場者5"
                                     rhfName={"player5"}
                                     errorMsg={errors.player5 && errors.player5.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者6 */}
@@ -146,7 +144,7 @@ export default function RegisterForm(){
                                     label="出場者6"
                                     rhfName={"player6"}
                                     errorMsg={errors.player6 && errors.player6.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者7 */}
@@ -154,7 +152,7 @@ export default function RegisterForm(){
                                     label="出場者7"
                                     rhfName={"player7"}
                                     errorMsg={errors.player7 && errors.player7.message}
-                                    canEmpty={false|| isTest}
+                                    canEmpty={false}
                                 />
 
                                 {/* 出場者8 (補欠) */}

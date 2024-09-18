@@ -78,4 +78,11 @@ export class GoogleSpreadsheetService {
         }
         return await sheet.getRows(); //GoogleSpreadsheetRow<Record<string, any>>[]
     }
+
+    /**
+     * sheet名の一覧を取得する。
+     */
+    async getSheetNames(): Promise<string[]> {
+        return this.doc.sheetsByIndex.map((sheet) => sheet.title);
+    }
 }

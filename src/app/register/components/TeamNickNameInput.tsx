@@ -1,5 +1,6 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
+import axios from "axios";
 
 export default function TeamNickNameInput<T extends FieldValues = never>(
     {
@@ -39,6 +40,14 @@ export default function TeamNickNameInput<T extends FieldValues = never>(
                             pattern: {
                                 value: /^[a-zA-Z0-9_-]+$/,
                                 message: "ハイフン、アンダーバー、半角英数字(大文字含む)のみで入力してください"
+                            },
+                            validate: {
+                                isExist: async v => {
+                                    const response = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/isTeamExist`, { v });
+                                    if(response.data.isExist){
+                                        return "そのチーム略名は既に存在しています."
+                                    }
+                                }
                             }
                         })}
                     />
