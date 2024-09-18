@@ -1,8 +1,8 @@
 "use client"
 
-import {Box, Heading} from "@chakra-ui/react";
+import {Box, Button, Heading} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
-import {registerType, onSubmit} from "@/app/register/components/RegisterForm/useRegisterForm";
+import {registerType, onSubmit, testSubmit} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamNameInput from "@/app/register/components/TeamNameInput";
 import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
@@ -22,8 +22,17 @@ export default function RegisterForm(){
 
     return(
         <div className="text-slate-100 bg-gray-800">
+            <Button
+                colorScheme='teal'
+                size='lg'
+                onClick={testSubmit}
+            >
+                テストボタン
+            </Button>
+
             <Box m={4} className="max-w-full">
 
+                {/* フォーム注意事項 */}
                 <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
                     <Heading
                         size="lg"
@@ -182,6 +191,13 @@ export default function RegisterForm(){
                         </Box>
 
                         {/* 送信ボタン */}
+                        <Button
+                            colorScheme='teal'
+                            size='lg'
+                            type="submit"
+                        >
+                            送信
+                        </Button>
 
                     </form>
                 </FormProvider>

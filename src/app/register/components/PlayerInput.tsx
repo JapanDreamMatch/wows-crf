@@ -57,7 +57,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     const username = v as string;
                                     if(canEmpty && username.length == 0) return true; //補欠用
 
-                                    const response = await axios.post('http://localhost:3000/api/ign', { username });
+                                    const response = await axios.post(`${process.env.PAGE_URL}/api/ign`, { username });
                                     const trulyName = response.data.nickname;
                                     const uid = response.data.account_id;
                                     const err = response.data.errorMsg;
