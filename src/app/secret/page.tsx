@@ -1,8 +1,7 @@
-
 export default function Home() {
-  return (
-    <main className="">
-        <p>TEST_SECRET: {process.env.TEST_SECRET ?? "undefined"}</p>
-    </main>
-  );
+    return (
+        <main className="">
+            <p>TEST_SECRET: {process.env.TEST_SECRET || "値が設定されていません"}</p>
+        </main>
+    );
 }
