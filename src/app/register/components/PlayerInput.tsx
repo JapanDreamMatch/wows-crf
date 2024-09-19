@@ -2,7 +2,7 @@ import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, FormControl, FormErrorMessage, FormLabel, HStack, Input} from "@chakra-ui/react";
 import axios from "axios";
 import {useState} from "react";
-import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/app/type/PlayerChecker";
+import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/util/type/PlayerChecker";
 import Link from "next/link";
 
 export default function PlayerInput<T extends FieldValues = never>(

@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import axios from "axios";
-import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/app/type/PlayerChecker";
+import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/util/type/PlayerChecker";
 
 export async function POST(req: NextRequest) {
     const { username } = await req.json();
