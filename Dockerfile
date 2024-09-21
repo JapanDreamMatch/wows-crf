@@ -28,4 +28,4 @@ RUN npm run build
 EXPOSE 8080
 
 # アプリケーションを起動
-CMD ["npm", "start"]
+# CMD ["npm", "start"]
