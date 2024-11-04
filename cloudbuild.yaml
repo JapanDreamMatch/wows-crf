@@ -6,13 +6,15 @@ steps:
     [
       "build",
       "-t",
-      "us-central1-docker.pkg.dev/${PROJECT_ID}/wows-crf/my-image",
-      ".",
+      "us-central1-docker.pkg.dev/${PROJECT_ID}/wows-crf/$COMMIT_SHA",
+      "."
     ]
+  env:
+    - 'NEXT_PUBLIC_TEST_SECRET=$TEST_SECRET'
   secretEnv: ['TEST_SECRET']
 availableSecrets:
   secretManager:
-    - versionName: projects/997465013063/secrets/wows-crf_TEST_SECRET/versions/latest
+    - versionName: projects/$PROJECT_ID/secrets/wows-crf_TEST_SECRET/versions/latest
       env: 'TEST_SECRET'
 options:
   logging: CLOUD_LOGGING_ONLY
