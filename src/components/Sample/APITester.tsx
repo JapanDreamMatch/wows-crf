@@ -8,7 +8,7 @@ export default function APITester() {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:3000/api/ign', { username });
+            const res = await axios.post('http://localhost:3000/api/hello', { username });
             setResponse(res.data.message);
             console.log("↓in APITester res.data.message↓")
             console.log(res.data.message);

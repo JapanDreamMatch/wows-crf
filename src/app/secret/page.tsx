@@ -1,10 +1,9 @@
 "use client"
 import {FormEvent, useState} from "react";
-import APITester from "@/components/Sample/APITester";
-
 
 export default function Home() {
     const [secret, setSecret] = useState('');
+    const [neko, setNeko] = useState('');
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
@@ -20,6 +19,7 @@ export default function Home() {
 
             const data = await response.json();
             setSecret(data.test);
+            setNeko(data.neko)
         } catch (error) {
             console.error('Error:', error);
         }
@@ -32,8 +32,7 @@ export default function Home() {
                 <button type="submit">Secretテスト送信</button>
             </form>
             <p>Secret: {secret}</p>
-
-            <APITester/>
+            <p>Neko: {neko}</p>
         </div>
     );
 }
