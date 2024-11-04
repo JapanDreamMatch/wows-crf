@@ -5,7 +5,8 @@ export async function POST() {
 
     if (NEXT_PUBLIC_TEST_SECRET) {
         try{
-            return JSON.parse(NEXT_PUBLIC_TEST_SECRET.toString());
+            // @ts-ignore
+            return JSON.parse(NEXT_PUBLIC_TEST_SECRET.toString('utf8'));
         }catch (err){
             throw Error(
                 `Unable to parse secret from Secret Manager. Make sure that the secret is JSON formatted: ${err}`
