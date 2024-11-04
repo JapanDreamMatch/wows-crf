@@ -1,5 +1,6 @@
 "use client"
 import {FormEvent, useState} from "react";
+import APITester from "@/components/Sample/APITester";
 
 
 export default function Home() {
@@ -28,9 +29,11 @@ export default function Home() {
         <div>
             <p>NEXT_PUBLIC_TEST_SECRET: {process.env.NEXT_PUBLIC_TEST_SECRET ?? "値が設定されていません"}</p>
             <form onSubmit={handleSubmit}>
-                <button type="submit">送信</button>
+                <button type="submit">Secretテスト送信</button>
             </form>
             <p>Secret: {secret}</p>
+
+            <APITester/>
         </div>
     );
 }
