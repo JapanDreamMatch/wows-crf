@@ -3,6 +3,7 @@ import {FormEvent, useState} from "react";
 
 export default function Home() {
     const [secret, setSecret] = useState('');
+    const [secret2, setSecret2] = useState('');
     const [neko, setNeko] = useState('');
 
     const handleSubmit = async (event: FormEvent) => {
@@ -19,6 +20,7 @@ export default function Home() {
 
             const data = await response.json();
             setSecret(data.test);
+            setSecret2(data.test2);
             setNeko(data.neko)
         } catch (error) {
             console.error('Error:', error);
@@ -32,6 +34,7 @@ export default function Home() {
                 <button type="submit">Secretテスト送信</button>
             </form>
             <p>Secret: {secret}</p>
+            <p>Secret2: {secret2}</p>
             <p>Neko: {neko}</p>
         </div>
     );
