@@ -14,3 +14,5 @@ availableSecrets:
   secretManager:
     - versionName: projects/997465013063/secrets/wows-crf_TEST_SECRET/versions/latest
       env: 'TEST_SECRET'
+options:
+  logging: CLOUD_LOGGING_ONLY
