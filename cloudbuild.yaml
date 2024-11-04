@@ -20,7 +20,7 @@ steps:
       'us-central1-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${COMMIT_SHA}'
     ]
 
-  # Deploy
+  # Deploy　
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: [
