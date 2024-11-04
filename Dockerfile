@@ -1,6 +1,12 @@
 # ベースイメージとして node:20-alpine を使用
 FROM node:20-alpine
 
+# ビルド時の引数として環境変数を定義
+ARG TEST_SECRET
+
+# 定義した引数を環境変数として設定
+ENV NEXT_PUBLIC_TEST_SECRET=$TEST_SECRET
+
 # 作業ディレクトリを設定
 WORKDIR /app
 
