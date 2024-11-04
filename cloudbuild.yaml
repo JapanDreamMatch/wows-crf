@@ -1,0 +1,16 @@
+steps:
+# (1)コンテナイメージのビルドを実行
+- name: "gcr.io/cloud-builders/docker"
+  entrypoint: 'bash'
+  args:
+    [
+      "build",
+      "-t",
+      "asia-northeast1-docker.pkg.dev/${PROJECT_ID}/wows-crf/my-image",
+      ".",
+    ]
+  secretEnv: ['TEST_SECRET']
+availableSecrets:
+  secretManager:
+    - versionName: projects/997465013063/secrets/wows-crf_TEST_SECRET/versions/latest
+      env: 'TEST_SECRET'
