@@ -26,6 +26,7 @@ export default function Home() {
 
     return (
         <div>
+            <p>NEXT_PUBLIC_TEST_SECRET: {process.env.NEXT_PUBLIC_TEST_SECRET ?? "値が設定されていません"}</p>
             <form onSubmit={handleSubmit}>
                 <button type="submit">送信</button>
             </form>
