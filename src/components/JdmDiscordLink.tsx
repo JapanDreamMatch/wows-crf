@@ -1,10 +1,16 @@
+"use client";
+import axios from "axios";
+import {useEffect, useState} from "react";
 
 export function JdmDiscordLink(){
 
-    const { NEXT_PUBLIC_DISCORD_LINK } = process.env;
+    const [discordLink, setDiscordLink] = useState("#");
+    useEffect( () => {
+        axios.post("/api/discordlink", {}).then(res => setDiscordLink(res.data.link));
+    })
 
     return (
-        <a href={NEXT_PUBLIC_DISCORD_LINK} className="hover:underline text-blue-400" target="_blank">
+        <a href={discordLink} className="hover:underline text-blue-400" target="_blank">
             JDM 運営Discord
         </a>
     )
