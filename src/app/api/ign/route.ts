@@ -4,9 +4,10 @@ import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/util/type/PlayerChecker";
 
 export async function POST(req: NextRequest) {
     const { username } = await req.json();
+    const { WOWS_API_APP_ID } = process.env;
 
     const wowsApiResponse
-        = await axios.get(`https://api.worldofwarships.asia/wows/account/list/?application_id=${process.env.WOWS_API_APP_ID}&search=${username}`)
+        = await axios.get(`https://api.worldofwarships.asia/wows/account/list/?application_id=${WOWS_API_APP_ID}&search=${username}`)
         .then(res => {
 
             let nickname, account_id, errorMsg = undefined;

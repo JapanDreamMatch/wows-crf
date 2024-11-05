@@ -23,7 +23,7 @@ export type registerType = yup.InferType<typeof registerSchema>;
 
 //送信ボタンの動作
 export const onSubmit: SubmitHandler<registerType> = async (formData) => {
-    const res = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/register`, {
+    const res = await axios.post(`/api/register`, {
         teamName: formData.teamName,
         teamNickName: formData.teamNickname,
         teamLogo: formData.teamLogo ?? undefined,

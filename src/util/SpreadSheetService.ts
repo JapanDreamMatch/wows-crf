@@ -11,9 +11,11 @@ export class GoogleSpreadsheetService {
      * @see APIドキュメント {@link https://theoephraim.github.io/node-google-spreadsheet/#/}
      */
     public constructor(sheetID: string) {
+        const { GOOGLE_SERVICE_ACCOUNT_EMAIL } = process.env;
+        const { GOOGLE_PRIVATE_KEY } = process.env;
         const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+            email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            key: (GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
         this.doc = new GoogleSpreadsheet(sheetID, auth);

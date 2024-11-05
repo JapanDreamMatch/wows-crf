@@ -4,6 +4,9 @@ import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
 
 export async function POST(req: NextRequest) {
+
+    const { REGISTER_SHEET_ID } = process.env;
+
     const {
         teamName,
         teamNickName,
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    const spreadSheet = new GoogleSpreadsheetService(process.env.REGISTER_SHEET_ID ?? "");
+    const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
     await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
     await spreadSheet.addRows(teamNickName,sheetRows);
 

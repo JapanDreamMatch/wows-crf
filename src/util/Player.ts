@@ -21,8 +21,9 @@ export class Player{
 
         const instance = new Player(this.ign);
 
-//Player UIDを取得する
-        await axios.get(`https://api.worldofwarships.asia/wows/account/list/?application_id=${process.env.WOWS_API_APP_ID}&search=${instance.ign}`)
+        //Player UIDを取得する
+        const { WOWS_API_APP_ID } = process.env;
+        await axios.get(`https://api.worldofwarships.asia/wows/account/list/?application_id=${WOWS_API_APP_ID}&search=${instance.ign}`)
             .then(res => {
                 const count = Number(res.data.meta.count);
                 if (count == 1) {
@@ -40,7 +41,7 @@ export class Player{
             })
 
         //パーソナルデータの取得
-        instance.winRate = await axios.get(`https://api.worldofwarships.asia/wows/account/info/?application_id=${process.env.WOWS_API_APP_ID}&account_id=${instance.uid}`)
+        instance.winRate = await axios.get(`https://api.worldofwarships.asia/wows/account/info/?application_id=${WOWS_API_APP_ID}&account_id=${instance.uid}`)
             .then(res => {
                 const status = res.data.status as unknown as string;
                 if (status == "ok") {

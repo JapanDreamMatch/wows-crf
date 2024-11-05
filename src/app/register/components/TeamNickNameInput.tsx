@@ -44,7 +44,7 @@ export default function TeamNickNameInput<T extends FieldValues = never>(
                             validate: {
                                 isExist: async v => {
                                     const teamNickName = v;
-                                    const response = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/isTeamExist`, { teamNickName });
+                                    const response = await axios.post(`/api/isTeamExist`, { teamNickName });
                                     if(response.data.isExist){
                                         return "そのチーム略名は既に存在しています."
                                     }

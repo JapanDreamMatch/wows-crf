@@ -11,21 +11,21 @@ export default function PlayerInput<T extends FieldValues = never>(
         rhfName,
         errorMsg,
         canEmpty
-    }:{
+    }: {
         label: string;
         rhfName: Path<T>;
         errorMsg: string | undefined;
         canEmpty: boolean;
     }
-){
+) {
 
     const {
         register
     } = useFormContext();
 
-    const [ accountId, setAccountId ] = useState<string|undefined>(undefined);
+    const [accountId, setAccountId] = useState<string | undefined>(undefined);
 
-    return(
+    return (
         <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
             <Box borderWidth='0px' borderRadius='lg' className="p-2">
                 <div className="mt-2">
@@ -47,7 +47,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                             validate: {
                                 checkLength: v => {
                                     const value = v as string;
-                                    if(value.length < 3 && !(canEmpty && value.length == 0)){
+                                    if (value.length < 3 && !(canEmpty && value.length == 0)) {
                                         return "プレイヤー名が短すぎます";
                                     }
                                     return true;
@@ -55,9 +55,9 @@ export default function PlayerInput<T extends FieldValues = never>(
 
                                 checkPlayer: async v => {
                                     const username = v as string;
-                                    if(canEmpty && username.length == 0) return true; //補欠用
+                                    if (canEmpty && username.length == 0) return true; //補欠用
 
-                                    const response = await axios.post(`${process.env.NEXT_PUBLIC_PAGE_URL}/api/ign`, { username });
+                                    const response = await axios.post(`/api/ign`, {username});
                                     const trulyName = response.data.nickname;
                                     const uid = response.data.account_id;
                                     const err = response.data.errorMsg;
@@ -65,8 +65,8 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     setAccountId(undefined);
 
                                     //エラーがある場合、エラー内容を返す
-                                    if(err !== undefined){
-                                        switch (err){
+                                    if (err !== undefined) {
+                                        switch (err) {
                                             case PLAYER_NOT_FOUND:
                                                 return "存在しないプレイヤー名です";
                                             case TOO_MANY_PLAYERS:
@@ -77,7 +77,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     }
 
                                     //入力が間違ってるが、候補が絞れる場合　例 => 入力:Seaoftrees0 返答:Seaoftrees08
-                                    if(username !== trulyName){
+                                    if (username !== trulyName) {
                                         return `入力が誤っています。「${trulyName}」の間違いですか？`
                                     }
 
