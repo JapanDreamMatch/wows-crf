@@ -6,10 +6,9 @@ export async function POST() {
 
     if (NEXT_PUBLIC_TEST_SECRET) {
         try{
-            // @ts-ignore
-            result = JSON.parse(NEXT_PUBLIC_TEST_SECRET.toString('utf8'));
+            result = NEXT_PUBLIC_TEST_SECRET ?? "";
         }catch (err){
-            result = `Unable to parse secret from Secret Manager. Make sure that the secret is JSON formatted: ${err}`;
+            result = `Unable to parse secret from Secret Manager. Make sure that the secret is String formatted: ${err}`;
         }
     }else{
         result = "NEXT_PUBLIC_TEST_SECRET is undefined";
