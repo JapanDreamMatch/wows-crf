@@ -17,6 +17,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 - axios
 - google-auth-library
 - google-spreadsheet
+- googleapis
 
 # .env.local
 次の内容を記載してます。各自とってきてください。  
