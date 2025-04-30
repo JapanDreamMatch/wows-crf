@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const {
         teamName,
         teamNickName,
-        teamLogo,
+        teamLogo, //多分何も入ってきてない
         contact,
         ign1,
         ign2,
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    //spreadsheetへの情報書き込み
     const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
     await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
     await spreadSheet.addRows(teamNickName,sheetRows);

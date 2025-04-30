@@ -21,6 +21,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
 
     function onChange(e: ChangeEvent<HTMLInputElement>){
         console.log("Uploaded!") //TODO: ファイルストレージへのアップロード
+        console.log(e.currentTarget.value)
     }
 
     const fileInput = useRef<HTMLInputElement | null>(null);
@@ -29,7 +30,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
         <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
             <Box borderWidth='0px' borderRadius='lg' className="p-2">
                 <div className="mt-2">
-                    <FormLabel className="pl-2">チームロゴ(任意) ※作成中</FormLabel>
+                    <FormLabel className="pl-2">チームロゴ(任意)</FormLabel>
                 </div>
                 <div>
                     <Input
