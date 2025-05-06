@@ -1,6 +1,6 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
-import {ChangeEvent, useRef, useState} from "react";
+import {ChangeEvent, useRef} from "react";
 export default function TeamLogoInput<T extends FieldValues = never>(
     {
         rhfName,

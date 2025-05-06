@@ -2,7 +2,6 @@ import {object, string} from "yup";
 import * as yup from "yup"
 import axios from "axios";
 import {SubmitHandler} from "react-hook-form";
-import {useState} from "react";
 
 export const registerSchema = object({
     teamName: string(),
