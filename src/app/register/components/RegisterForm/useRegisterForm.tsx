@@ -11,9 +11,6 @@ export const registerSchema = object({
         .test("fileSize", "ファイルサイズが大きすぎます", (value) => {
             return value && value.size <= 2 * 1024 * 1024; // 2MB制限
         })
-        // .test("fileType", "jpeg, png画像ファイルのみ許可されます", (value) => {
-        //     return value && ["image/jpeg", "image/png"].includes(value.type);
-        // })
     ,
     contact: string(),
     player1: string(),

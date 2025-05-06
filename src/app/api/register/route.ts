@@ -3,16 +3,11 @@ import {Player} from "@/util/Player";
 import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
 import {Readable} from "node:stream";
-import {drive} from "googleapis/build/src/apis/drive";
 
 export async function POST(req: NextRequest) {
 
     const { REGISTER_SHEET_ID } = process.env;
-    const DRIVE_CLIENT_ID = process.env.DRIVE_CLIENT_ID ?? "";
-    const DRIVE_CLIENT_SECRET = process.env.DRIVE_CLIENT_SECRET ?? "";
-    const DRIVE_REDIRECT_URI = process.env.DRIVE_REDIRECT_URI ?? "";
     const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID ?? "";
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS ?? "" as string);
 
     const formData = await req.formData();
 
@@ -77,9 +72,9 @@ export async function POST(req: NextRequest) {
     }
 
     //spreadsheetへの情報書き込み
-    // const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
-    // await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
-    // await spreadSheet.addRows(teamNickName,sheetRows);
+    const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
+    await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
+    await spreadSheet.addRows(teamNickName,sheetRows);
 
 
     //画像に(チームロゴ)関する処理
@@ -94,14 +89,17 @@ export async function POST(req: NextRequest) {
     // Buffer から Node.js のストリームを作成
     const nodeStream = Readable.from(buffer);
 
+    //ファイル名を作成
+    const lastDotIndex = teamLogo.name.lastIndexOf(".");
+    const fileName = teamNickName + (lastDotIndex !== -1 ? teamLogo.name.slice(lastDotIndex) : "");
+
     // Get credentials and build service
-    // TODO (developer) - Use appropriate auth mechanism for your app
     const auth = new GoogleAuth({
         scopes: 'https://www.googleapis.com/auth/drive',
     });
     const drive = google.drive({version: 'v3', auth});
     const fileMetadata = {
-        name: teamLogo.name,
+        name: fileName,
         parents: [DRIVE_FOLDER_ID],
     };
     // ファイルのアップロード
@@ -113,19 +111,6 @@ export async function POST(req: NextRequest) {
         },
         fields: "id",
     });
-    console.log("File Id:", uploadResponse.data.id);
 
-
-    //確認用
-    // アップロード後、ファイルのメタデータを取得して確認
-    const fileRecord = await drive.files.get({
-        fileId: uploadResponse.data.id,
-        fields: "id, name, parents",
-    });
-    console.log("File metadata:", fileRecord.data);
-
-
-    console.log("run end")
-    return NextResponse.error();
     return NextResponse.json({ message: "ok" });
 }

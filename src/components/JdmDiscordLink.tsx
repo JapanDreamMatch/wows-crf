@@ -6,6 +6,7 @@ export function JdmDiscordLink(){
 
     const [discordLink, setDiscordLink] = useState("#");
     useEffect(() => {
+        //これは公開してもいいやつ
         const docURL = "https://docs.google.com/document/d/1XY0N20Y1CZgTxq6b_4D0bJAe8X8ba_UMwt_RVy-bHBY/edit?usp=sharing"
 
         async function fetchContent() {
@@ -38,6 +39,5 @@ export function JdmDiscordLink(){
             </a>
         )
     }
-
 
 }
