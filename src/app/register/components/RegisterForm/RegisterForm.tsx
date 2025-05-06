@@ -58,7 +58,7 @@ export default function RegisterForm(){
                             errorMsg={errors.teamNickname && errors.teamNickname.message}
                         />
 
-                        {/* チームロゴ 今はパス */}
+                        {/* チームロゴ */}
                         <TeamLogoInput
                             rhfName={"teamLogo"}
                             errorMsg={errors.teamLogo && errors.teamLogo.message}

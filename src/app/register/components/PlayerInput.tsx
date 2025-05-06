@@ -40,8 +40,6 @@ export default function PlayerInput<T extends FieldValues = never>(
                                 required: v => {
                                     setAccountId(undefined) //これを入れるために全部validateで処理している
                                     const value = v as string;
-                                    console.log("canEmpty: " + canEmpty)
-                                    console.log("valueLength: " + value.length)
                                     if(!canEmpty && value.length == 0) return "ゲーム内のプレイヤー名を入力してください"
                                 },
 

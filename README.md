@@ -18,6 +18,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 - google-auth-library
 - google-spreadsheet
 - googleapis
+- formidable
 
 # .env.local
 次の内容を記載してます。各自とってきてください。  

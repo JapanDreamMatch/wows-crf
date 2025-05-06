@@ -1,7 +1,8 @@
 import {object, string} from "yup";
-import * as yup from "yup";
+import * as yup from "yup"
 import axios from "axios";
 import {SubmitHandler} from "react-hook-form";
+import {useState} from "react";
 
 export const registerSchema = object({
     teamName: string(),
@@ -33,54 +34,32 @@ export type registerType = yup.InferType<typeof registerSchema>;
 //送信ボタンの動作
 export const onSubmit: SubmitHandler<registerType> = async (formData) => {
 
-    const formDataObj = new FormData();
-
-    //テキストデータの追加
-    formDataObj.append("teamName", String(formData.teamName));
-    formDataObj.append("teamNickname", String(formData.teamNickname));
-    formDataObj.append("contact", String(formData.contact));
-    formDataObj.append("player1", String(formData.player1));
-    formDataObj.append("player2", String(formData.player2));
-    formDataObj.append("player3", String(formData.player3));
-    formDataObj.append("player4", String(formData.player4));
-    formDataObj.append("player5", String(formData.player5));
-    formDataObj.append("player6", String(formData.player6));
-    formDataObj.append("player7", String(formData.player7));
-    formDataObj.append("player8", String(formData.player8));
-    formDataObj.append("player9", String(formData.player9));
-    formDataObj.append("player10", String(formData.player10));
-    formDataObj.append("comment", String(formData.comment));
-
-
-    // ファイルが存在する場合のみ追加
-    if (formData.teamLogo) {
-        formDataObj.append("teamLogo", formData.teamLogo);
+    let logo;
+    if(formData.teamLogo instanceof FileList){
+        logo = formData.teamLogo[0];
+    } else if(formData.teamLogo instanceof File){
+        logo = formData.teamLogo;
     }
 
-    const res = await axios.post(`/api/register`, formDataObj, {
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
+    const sendData = new FormData();
+    sendData.append("teamName", formData.teamName ?? "");
+    sendData.append("teamNickname", formData.teamNickname ?? "");
+    sendData.append("teamLogo", logo ?? new Blob());
+    sendData.append("contact", formData.contact ?? "");
+    sendData.append("player1", formData.player1 ?? "");
+    sendData.append("player2", formData.player2 ?? "");
+    sendData.append("player3", formData.player3 ?? "");
+    sendData.append("player4", formData.player4 ?? "");
+    sendData.append("player5", formData.player5 ?? "");
+    sendData.append("player6", formData.player6 ?? "");
+    sendData.append("player7", formData.player7 ?? "");
+    sendData.append("player8", formData.player8 ?? "");
+    sendData.append("player9", formData.player9 ?? "");
+    sendData.append("player10", formData.player10 ?? "");
+    sendData.append("comment", formData.comment ?? "");
+    const res = await axios.post(`/api/register`, sendData,{
+        headers: { "Content-Type": "multipart/form-data" },
     });
-
-
-    // const res = await axios.post(`/api/register`, {
-    //     teamName: formData.teamName,
-    //     teamNickName: formData.teamNickname,
-    //     teamLogo: formData.teamLogo ?? undefined,
-    //     contact: formData.contact,
-    //     ign1: formData.player1 ?? "",
-    //     ign2: formData.player2 ?? "",
-    //     ign3: formData.player3 ?? "",
-    //     ign4: formData.player4 ?? "",
-    //     ign5: formData.player5 ?? "",
-    //     ign6: formData.player6 ?? "",
-    //     ign7: formData.player7 ?? "",
-    //     ign8: formData.player8 ?? "",
-    //     ign9: formData.player9 ?? "",
-    //     ign10: formData.player10 ?? "",
-    //     comment: formData.comment ?? ""
-    // });
 
     return res.data.message as string;
 }

@@ -17,15 +17,14 @@ export default function TeamLogoInput<T extends FieldValues = never>(
 
     const { ref, onChange: rhfOnChange, ...rest } = register(rhfName);
 
-    // 添付画像を状態管理
-    const [imageFile, setImageFile] = useState<File | null>(null);
 
     function onChange(e: ChangeEvent<HTMLInputElement>){
         console.log("Image Changed!");
         console.log(e.currentTarget?.files);
 
         if (e.target.files && e.target.files[0]) {
-            setImageFile(e.target.files[0]);
+            //register?
+            console.log("fileSet!");
         }
         void rhfOnChange(e);// React Hook Form の onChange を明示的に呼び出すことでoverwriteしている
     }

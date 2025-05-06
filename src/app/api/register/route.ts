@@ -2,28 +2,42 @@ import {NextRequest, NextResponse} from "next/server";
 import {Player} from "@/util/Player";
 import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
+import {google} from "googleapis";
 
 export async function POST(req: NextRequest) {
 
     const { REGISTER_SHEET_ID } = process.env;
+    const DRIVE_CLIENT_ID = process.env.DRIVE_CLIENT_ID ?? "";
+    const DRIVE_CLIENT_SECRET = process.env.DRIVE_CLIENT_SECRET ?? "";
+    const DRIVE_REDIRECT_URI = process.env.DRIVE_REDIRECT_URI ?? "";
 
-    const {
-        teamName,
-        teamNickName,
-        teamLogo,
-        contact,
-        ign1,
-        ign2,
-        ign3,
-        ign4,
-        ign5,
-        ign6,
-        ign7,
-        ign8,
-        ign9,
-        ign10,
-        comment
-    } = await req.json();
+    // const drive = google.drive({
+    //     version: "v3",
+    //     auth: new google.auth.OAuth2(
+    //         DRIVE_CLIENT_ID,
+    //         DRIVE_CLIENT_SECRET,
+    //         DRIVE_REDIRECT_URI
+    //     ),
+    // });
+
+    const formData = await req.formData();
+
+    //テキストデータ
+    const teamName = formData.get("teamName") as string;
+    const teamNickName = formData.get("teamNickname") as string;
+    const contact = formData.get("contact") as string;
+    const teamLogo = formData.get("teamLogo") as File;
+    const ign1 = formData.get("player1") as string;
+    const ign2 = formData.get("player2") as string;
+    const ign3 = formData.get("player3") as string;
+    const ign4 = formData.get("player4") as string;
+    const ign5 = formData.get("player5") as string;
+    const ign6 = formData.get("player6") as string;
+    const ign7 = formData.get("player7") as string;
+    const ign8 = formData.get("player8") as string;
+    const ign9 = formData.get("player9") as string;
+    const ign10 = formData.get("player10") as string;
+    const comment = formData.get("comment") as string;
 
     //プレイヤーの取得
     const players = await Promise.all([
@@ -73,5 +87,9 @@ export async function POST(req: NextRequest) {
     await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
     await spreadSheet.addRows(teamNickName,sheetRows);
 
+    //画像に(チームロゴ)関する処理
+
+
+    return NextResponse.error();
     return NextResponse.json({ message: "ok" });
 }
