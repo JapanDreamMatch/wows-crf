@@ -1,6 +1,6 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
-import {ChangeEvent, useRef} from "react";
+import {ChangeEvent, useRef, useState} from "react";
 export default function TeamLogoInput<T extends FieldValues = never>(
     {
         rhfName,
@@ -15,13 +15,19 @@ export default function TeamLogoInput<T extends FieldValues = never>(
         register
     } = useFormContext();
 
-    const { ref, ...rest } = register(rhfName, {
-        onChange,
-    })
+    const { ref, onChange: rhfOnChange, ...rest } = register(rhfName);
+
+    // 添付画像を状態管理
+    const [imageFile, setImageFile] = useState<File | null>(null);
 
     function onChange(e: ChangeEvent<HTMLInputElement>){
-        console.log("Uploaded!") //TODO: ファイルストレージへのアップロード
-        console.log(e.currentTarget.value)
+        console.log("Image Changed!");
+        console.log(e.currentTarget?.files);
+
+        if (e.target.files && e.target.files[0]) {
+            setImageFile(e.target.files[0]);
+        }
+        void rhfOnChange(e);// React Hook Form の onChange を明示的に呼び出すことでoverwriteしている
     }
 
     const fileInput = useRef<HTMLInputElement | null>(null);
@@ -39,6 +45,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
                             ref(e);
                             fileInput.current = e;
                         }}
+                        onChange={onChange}
                         accept="image/*"
                         className="pt-1"
                         {...rest}

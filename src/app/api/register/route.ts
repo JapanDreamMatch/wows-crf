@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const {
         teamName,
         teamNickName,
-        teamLogo, //多分何も入ってきてない
+        teamLogo,
         contact,
         ign1,
         ign2,
