@@ -36,15 +36,22 @@ export default function PlayerInput<T extends FieldValues = never>(
                         id={rhfName}
                         placeholder="Please input WoWS IGN."
                         {...register(rhfName, {
-                            required: {
-                                value: !canEmpty,
-                                message: "ゲーム内のプレイヤー名を入力してください"
-                            },
-                            pattern: {
-                                value: /^[a-zA-Z0-9_]+$/,
-                                message: "有効なプレイヤー名を入力してください"
-                            },
                             validate: {
+                                required: v => {
+                                    setAccountId(undefined) //これを入れるために全部validateで処理している
+                                    const value = v as string;
+                                    if(!canEmpty && value.length == 0) return "ゲーム内のプレイヤー名を入力してください"
+                                },
+
+                                pattern: v => {
+                                    const username = v as string;
+                                    if (canEmpty && username.length == 0) return true; //補欠用
+                                    const ptn = /^[a-zA-Z0-9_]+$/
+                                    if(!ptn.test(username)){
+                                        return "有効なプレイヤー名を入力してください"
+                                    }
+                                },
+
                                 checkLength: v => {
                                     const value = v as string;
                                     if (value.length < 3 && !(canEmpty && value.length == 0)) {

@@ -1,6 +1,6 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
-import {ChangeEvent, useRef} from "react";
+import {useRef} from "react";
 export default function TeamLogoInput<T extends FieldValues = never>(
     {
         rhfName,
@@ -15,13 +15,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
         register
     } = useFormContext();
 
-    const { ref, ...rest } = register(rhfName, {
-        onChange,
-    })
-
-    function onChange(e: ChangeEvent<HTMLInputElement>){
-        console.log("Uploaded!") //TODO: ファイルストレージへのアップロード
-    }
+    const { ref, onChange: rhfOnChange, ...rest } = register(rhfName);
 
     const fileInput = useRef<HTMLInputElement | null>(null);
 
@@ -29,7 +23,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
         <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
             <Box borderWidth='0px' borderRadius='lg' className="p-2">
                 <div className="mt-2">
-                    <FormLabel className="pl-2">チームロゴ(任意) ※作成中</FormLabel>
+                    <FormLabel className="pl-2">チームロゴ(任意)</FormLabel>
                 </div>
                 <div>
                     <Input

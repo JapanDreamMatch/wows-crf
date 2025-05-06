@@ -10,5 +10,8 @@ https://scrapbox.io/mrsekut-p/Yup%E3%81%A7%E9%9D%9E%E5%90%8C%E6%9C%9F%E9%80%9A%E
 .env cloudrun
 https://cloud.google.com/run/docs/configuring/environment-variables?hl=ja
 
+Google Drive
+https://zenn.dev/tatsuyasusukida/articles/google-drive-write
+
 # issueかも?
 - チーム略明が被るかも
