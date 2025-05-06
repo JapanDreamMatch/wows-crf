@@ -2,7 +2,7 @@
 
 import {Box, Button, Heading} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
-import {registerType, onSubmit} from "@/app/register/components/RegisterForm/useRegisterForm";
+import {registerType, useRegisterForm} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamNameInput from "@/app/register/components/TeamNameInput";
 import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
@@ -15,7 +15,9 @@ import {useRouter} from "next/navigation";
 
 export default function RegisterForm(){
 
-    //react-hook-form
+    const { onSubmit } = useRegisterForm();
+
+    //react-hook-form Validation
     const methods  = useForm<registerType>({
         mode: "onBlur", // onChange, onBlur, onSubmit, onTouched, allが選択可能
     });
@@ -56,7 +58,7 @@ export default function RegisterForm(){
                             errorMsg={errors.teamNickname && errors.teamNickname.message}
                         />
 
-                        {/* チームロゴ 今はパス */}
+                        {/* チームロゴ */}
                         <TeamLogoInput
                             rhfName={"teamLogo"}
                             errorMsg={errors.teamLogo && errors.teamLogo.message}
