@@ -22,11 +22,12 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # .env.local
 次の内容を記載してます。各自とってきてください。  
 ```.ini
-WOWS_API_APP_ID="appid"
-REGISTER_SHEET_ID='sheetid'
-GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
-GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
+API_SETTINGS_SHEET_ID=''
 DRIVE_FOLDER_ID='DriveFolderID'
 GOOGLE_CREDENTIALS='cledentials_json'
+GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
+GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
+REGISTER_SHEET_ID='sheetid'
+WOWS_API_APP_ID="appid"
 ```
 
