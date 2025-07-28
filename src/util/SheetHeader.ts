@@ -6,3 +6,8 @@ export const REGISTER_HEADER = [
     "Contact",
     "Comment"
 ]
+export const REGISTER_PERIOD = [
+    "StartDate",
+    "EndDate",
+    "Ignore(debug)",
+]
