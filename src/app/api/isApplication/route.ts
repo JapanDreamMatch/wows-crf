@@ -9,7 +9,7 @@ export async function POST() {
     const isIgnore = await IsIgnore();
 
     if(isIgnore || (checkTime && checkTeamAmount)){
-        NextResponse.json({canRegister: "YES"})
+        return NextResponse.json({canRegister: "YES"});
     }else{
         return NextResponse.json({ canRegister: "NO" });
     }
