@@ -53,11 +53,15 @@ export const onSubmit: SubmitHandler<registerType> = async (formData) => {
     sendData.append("player9", formData.player9 ?? "");
     sendData.append("player10", formData.player10 ?? "");
     sendData.append("comment", formData.comment ?? "");
-    const res = await axios.post(`/api/register`, sendData,{
-        headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    return res.data.message as string;
+    try {
+        const res = await axios.post(`/api/register`, sendData,{
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+        return res.data.message as string;
+    } catch (error: any) {
+        // エラーメッセージをthrow
+        throw new Error(error?.response?.data?.message || "登録に失敗しました");
+    }
 }
 
 export const useRegisterForm = () => {

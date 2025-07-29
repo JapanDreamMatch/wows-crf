@@ -9,7 +9,7 @@ import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
 import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 
 
@@ -26,16 +26,28 @@ export default function RegisterForm(){
         isSubmitSuccessful
     } = methods.formState;
     const router = useRouter();
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if(isSubmitSuccessful){
-            router.push('/success')
+    // 送信ハンドラをラップしてエラー時に遷移
+    const handleSubmit = async (data: registerType) => {
+        try {
+            await onSubmit(data);
+            router.push('/success');
+        } catch (e: any) {
+            setSubmitError(e.message || "登録に失敗しました");
+            router.push(`/register/error?msg=${encodeURIComponent(e.message || "登録に失敗しました")}`);
         }
-    }, [isSubmitSuccessful, router]);
+    };
+
+    // useEffect(() => {
+    //     if(isSubmitSuccessful){
+    //         router.push('/success')
+    //     }
+    // }, [isSubmitSuccessful, router]);
 
     return(
         <FormProvider {...methods}>
-            <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <form onSubmit={methods.handleSubmit(handleSubmit)}>
 
                 {/* チーム概要 */}
                 <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
