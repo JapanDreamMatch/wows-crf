@@ -4,10 +4,10 @@ export async function CheckTime(): Promise<boolean> {
     const { API_SETTINGS_SHEET_ID } = process.env;
     const spreadSheet = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
 
-    const sheet = await spreadSheet.getSheet(registerPeriod);
+    const sheet = await spreadSheet.getSheet("registerPeriod");
+    await sheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3});
     const startCell = sheet.getCell(1,0).value?.toString() ?? undefined;
     const endCell = sheet.getCell(1,1).value?.toString() ?? undefined;
-
     if(startCell == undefined || endCell == undefined) {
         return false;
     }

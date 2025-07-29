@@ -93,6 +93,7 @@ export class GoogleSpreadsheetService {
      * @param sheetTitle
      */
     async getSheet(sheetTitle: string): Promise<GoogleSpreadsheetWorksheet> {
+        await this.doc.loadInfo();
         return this.doc.sheetsByTitle[sheetTitle];
     }
 }

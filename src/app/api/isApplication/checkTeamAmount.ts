@@ -5,7 +5,8 @@ export async function CheckTeamAmount(): Promise<boolean> {
 
     //チーム上限の設定取得
     const settingsBook = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
-    const settingsSheet = await settingsBook.getSheet(maxTeamAmount);
+    const settingsSheet = await settingsBook.getSheet("maxTeamAmount");
+    await settingsSheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 2});
     const maxAmount = Number(settingsSheet.getCell(1,0).value?.toString() ?? "0");
 
     //チームの配列取得
