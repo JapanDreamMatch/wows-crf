@@ -13,5 +13,5 @@ export async function CheckTeamAmount(): Promise<boolean> {
     const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
     const sheetNames = await spreadSheet.getSheetNames();
 
-    return Boolean(sheetNames.length > maxAmount);
+    return Boolean(sheetNames.length < maxAmount);
 }

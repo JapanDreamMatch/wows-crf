@@ -8,6 +8,5 @@ export async function IsIgnore(): Promise<boolean> {
     await sheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3});
     const isIgnore = sheet.getCell(1,2).value?.toString() ?? undefined;
 
-    console.log(isIgnore);
     return !(isIgnore == undefined || isIgnore != "YES")
 }

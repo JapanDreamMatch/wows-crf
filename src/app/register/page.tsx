@@ -3,11 +3,22 @@
 import RegisterForm from "@/app/register/components/RegisterForm/RegisterForm";
 import {Box, Heading} from "@chakra-ui/react";
 import {JdmDiscordLink} from "@/components/JdmDiscordLink";
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import axios from "axios";
 
-export default function ContestantRegister(){
+export default function ContestantRegister() {
     const [status, setStatus] = useState<"loading" | "yes" | "no">("loading");
+    const [loadingDots, setLoadingDots] = useState<string>(".");
+
+    useEffect(() => {
+        if (status !== "loading") return;
+        let count = 1;
+        const interval = setInterval(() => {
+            setLoadingDots(".".repeat((count % 3) + 1));
+            count++;
+        }, 300);
+        return () => clearInterval(interval);
+    }, [status]);
 
     useEffect(() => {
         let isMounted = true;
@@ -24,15 +35,31 @@ export default function ContestantRegister(){
                 if (isMounted) setStatus("no");
             }
         })();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     if (status === "loading") {
         return (
             <div className="text-slate-100 bg-gray-800">
                 <Box m={4} className="max-w-full">
-                    <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
-                        読み込み中
+                    <Box className="max-w-3xl p-2 mx-auto my-4 text-center flex flex-col items-center">
+                        <span className="inline-flex items-center justify-center">
+                            <span>読み込み中</span>
+                            <span
+                                style={{
+                                    display: "inline-block",
+                                    width: "2.2em", // ドット3つ分の幅を確保
+                                    textAlign: "left",
+                                    marginLeft: "0.2em",
+                                    letterSpacing: "0.1em"
+                                }}
+                                aria-live="polite"
+                            >
+                                {loadingDots}
+                            </span>
+                        </span>
                     </Box>
                 </Box>
             </div>
@@ -51,7 +78,7 @@ export default function ContestantRegister(){
         );
     }
 
-    return(
+    return (
         <div className="text-slate-100 bg-gray-800">
             <Box m={4} className="max-w-full">
 
