@@ -1,10 +1,11 @@
 "use client";
 
 import RegisterForm from "@/app/register/components/RegisterForm/RegisterForm";
-import {Box, Heading} from "@chakra-ui/react";
+import {Box, Button, Heading} from "@chakra-ui/react";
 import {JdmDiscordLink} from "@/components/JdmDiscordLink";
 import {useEffect, useState} from "react";
 import axios from "axios";
+import Link from "next/link";
 
 export default function ContestantRegister() {
     const [status, setStatus] = useState<"loading" | "yes" | "no">("loading");
@@ -68,10 +69,15 @@ export default function ContestantRegister() {
 
     if (status === "no") {
         return (
-            <div className="text-slate-100 bg-gray-800">
+            <div className="text-slate-100 bg-gray-800 min-h-screen">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
-                        現在は募集期間ではありません
+                        <Heading size="lg" className="mb-4">現在は募集期間ではありません</Heading>
+                        <Link href="/" className="">
+                            <Button colorScheme="teal">
+                                トップに戻る
+                            </Button>
+                        </Link>
                     </Box>
                 </Box>
             </div>

@@ -3,12 +3,11 @@ import {Player} from "@/util/Player";
 import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
 import {Readable} from "node:stream";
-import {GoogleAuth} from "google-auth-library";
-import {google} from "googleapis";
+import {CheckTime} from "@/app/api/isApplication/checkTime";
+import {CheckTeamAmount} from "@/app/api/isApplication/checkTeamAmount";
+import {IsIgnore} from "@/app/api/isApplication/isIgnore";
 
 export async function POST(req: NextRequest) {
-
-    console.log("送信処理の開始"); //TODO: REMOVE debug log
 
     try {
         const { REGISTER_SHEET_ID } = process.env;
@@ -16,15 +15,17 @@ export async function POST(req: NextRequest) {
 
         const formData = await req.formData();
 
+
         //提出期限すぎていないかのチェック
-        // const isAppRes = await axios.post("/api/isApplication", {});
-        // console.log(isAppRes.data?.canRegister); //TODO: REMOVE debug log
-        // if (isAppRes.data?.canRegister != "YES") {
-        //     return NextResponse.json(
-        //         { message: "募集期間が過ぎています" },
-        //         { status: 400 }
-        //     );
-        // }
+        const checkTime = await CheckTime();
+        const checkTeamAmount = await CheckTeamAmount();
+        const isIgnore = await IsIgnore();
+        if(!(isIgnore || (checkTime && checkTeamAmount))){
+            return NextResponse.json(
+                { message: "募集期間が過ぎています" },
+                { status: 503 }
+            );
+        }
 
         //テキストデータ
         const teamName = formData.get("teamName") as string;
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
                 parents: [DRIVE_FOLDER_ID],
             };
             // ファイルのアップロード
-            const uploadResponse = await drive.files.create({
+            await drive.files.create({
                 requestBody: fileMetadata,
                 media: {
                     mimeType: teamLogo.type,
@@ -136,7 +137,7 @@ export async function POST(req: NextRequest) {
         // エラー時はエラーメッセージを返す
         return NextResponse.json(
             { message: error?.message ?? "登録処理中にエラーが発生しました" },
-            { status: 400 }
+            { status: 500 }
         );
     }
 }

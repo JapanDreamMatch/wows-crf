@@ -9,7 +9,6 @@ import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
 import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
-import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 
 
@@ -27,7 +26,6 @@ export default function RegisterForm(){
         isSubmitSuccessful
     } = methods.formState;
     const router = useRouter();
-    const [submitError, setSubmitError] = useState<string | null>(null);
 
     // 送信ハンドラをラップしてエラー時に遷移
     const handleSubmit = async (data: registerType) => {
@@ -35,16 +33,10 @@ export default function RegisterForm(){
             await onSubmit(data);
             router.push('/success');
         } catch (e: any) {
-            setSubmitError(e.message || "登録に失敗しました");
-            router.push(`/register/error?msg=${encodeURIComponent(e.message || "登録に失敗しました")}`);
+            router.push(`/register/error?msg=${encodeURIComponent(e.message || "内部エラーが発生しました")}`);
         }
     };
 
-    useEffect(() => {
-        if(isSubmitSuccessful){
-            router.push('/success')
-        }
-    }, [isSubmitSuccessful, router]);
 
     return(
         <FormProvider {...methods}>
