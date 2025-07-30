@@ -21,7 +21,8 @@ export default function RegisterForm(){
     const methods  = useForm<registerType>({
         mode: "onBlur", // onChange, onBlur, onSubmit, onTouched, allが選択可能
     });
-    const {errors,
+    const {
+        errors,
         isSubmitting,
         isSubmitSuccessful
     } = methods.formState;
@@ -39,11 +40,11 @@ export default function RegisterForm(){
         }
     };
 
-    // useEffect(() => {
-    //     if(isSubmitSuccessful){
-    //         router.push('/success')
-    //     }
-    // }, [isSubmitSuccessful, router]);
+    useEffect(() => {
+        if(isSubmitSuccessful){
+            router.push('/success')
+        }
+    }, [isSubmitSuccessful, router]);
 
     return(
         <FormProvider {...methods}>

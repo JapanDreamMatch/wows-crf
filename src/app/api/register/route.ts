@@ -3,9 +3,13 @@ import {Player} from "@/util/Player";
 import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
 import {Readable} from "node:stream";
-import axios from "axios";
+import {GoogleAuth} from "google-auth-library";
+import {google} from "googleapis";
 
 export async function POST(req: NextRequest) {
+
+    console.log("送信処理の開始"); //TODO: REMOVE debug log
+
     try {
         const { REGISTER_SHEET_ID } = process.env;
         const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID ?? "";
@@ -13,14 +17,14 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
 
         //提出期限すぎていないかのチェック
-        const isAppRes = await axios.post("/api/isApplication", {});
-        console.log(isAppRes.data?.canRegister); //TODO: REMOVE debug log
-        if (isAppRes.data?.canRegister != "YES") {
-            return NextResponse.json(
-                { message: "募集期間が過ぎています" },
-                { status: 400 }
-            );
-        }
+        // const isAppRes = await axios.post("/api/isApplication", {});
+        // console.log(isAppRes.data?.canRegister); //TODO: REMOVE debug log
+        // if (isAppRes.data?.canRegister != "YES") {
+        //     return NextResponse.json(
+        //         { message: "募集期間が過ぎています" },
+        //         { status: 400 }
+        //     );
+        // }
 
         //テキストデータ
         const teamName = formData.get("teamName") as string;
@@ -89,42 +93,46 @@ export async function POST(req: NextRequest) {
 
 
         //画像に(チームロゴ)関する処理
-        const fs = require('fs');
-        const {GoogleAuth} = require('google-auth-library');
-        const {google} = require('googleapis');
+        if (teamLogo && typeof teamLogo === "object" && teamLogo.size > 0) {
+            // const fs = require('fs');
+            const {GoogleAuth} = require('google-auth-library');
+            const {google} = require('googleapis');
 
-        // ファイルを ArrayBuffer として取得し、Buffer に変換
-        const arrayBuffer = await teamLogo.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+            // ファイルを ArrayBuffer として取得し、Buffer に変換
+            const arrayBuffer = await teamLogo.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
 
-        // Buffer から Node.js のストリームを作成
-        const nodeStream = Readable.from(buffer);
+            // Buffer から Node.js のストリームを作成
+            const nodeStream = Readable.from(buffer);
 
-        //ファイル名を作成
-        const lastDotIndex = teamLogo.name.lastIndexOf(".");
-        const fileName = teamNickName + (lastDotIndex !== -1 ? teamLogo.name.slice(lastDotIndex) : "");
+            //ファイル名を作成
+            const lastDotIndex = teamLogo.name.lastIndexOf(".");
+            const fileName = teamNickName + (lastDotIndex !== -1 ? teamLogo.name.slice(lastDotIndex) : "");
 
-        // Get credentials and build service
-        const auth = new GoogleAuth({
-            scopes: 'https://www.googleapis.com/auth/drive',
-        });
-        const drive = google.drive({version: 'v3', auth});
-        const fileMetadata = {
-            name: fileName,
-            parents: [DRIVE_FOLDER_ID],
-        };
-        // ファイルのアップロード
-        const uploadResponse = await drive.files.create({
-            requestBody: fileMetadata,
-            media: {
-                mimeType: teamLogo.type,
-                body: nodeStream,
-            },
-            fields: "id",
-        });
+            // Get credentials and build service
+            const auth = new GoogleAuth({
+                scopes: 'https://www.googleapis.com/auth/drive',
+            });
+            const drive = google.drive({version: 'v3', auth});
+            const fileMetadata = {
+                name: fileName,
+                parents: [DRIVE_FOLDER_ID],
+            };
+            // ファイルのアップロード
+            const uploadResponse = await drive.files.create({
+                requestBody: fileMetadata,
+                media: {
+                    mimeType: teamLogo.type,
+                    body: nodeStream,
+                },
+                fields: "id",
+            });
+        }
 
         return NextResponse.json({ message: "ok" });
+
     } catch (error: any) {
+        console.error(error); // エラー内容をログ出力
         // エラー時はエラーメッセージを返す
         return NextResponse.json(
             { message: error?.message ?? "登録処理中にエラーが発生しました" },
