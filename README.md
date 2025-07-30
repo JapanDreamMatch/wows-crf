@@ -22,11 +22,47 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # .env.local
 次の内容を記載してます。各自とってきてください。  
 ```.ini
-WOWS_API_APP_ID="appid"
-REGISTER_SHEET_ID='sheetid'
-GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
-GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
+API_SETTINGS_SHEET_ID=''
 DRIVE_FOLDER_ID='DriveFolderID'
+GOOGLE_APPLICATION_CREDENTIALS='FILEPATH/credentials.json'
 GOOGLE_CREDENTIALS='cledentials_json'
+GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
+GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
+REGISTER_SHEET_ID='sheetid'
+WOWS_API_APP_ID="appid"
 ```
 
+# Google SpreadSheetの設定
+## 応募登録の記録シート(名前任意)
+1. Google SpreadSheetを作成
+2. 作成したSpreadSheetを`GOOGLE_SERVICE_ACCOUNT_EMAIL`のアドレスに共有設定する
+3. シートの名前を`@init`とする
+> NOTE:  
+> `@init`にしないと、シート数で名前を判断しているため除外されません。  
+> `@`が含まれる名前はすべて除外されます。出場チームに@を使った名前は登録できません。
+4. SpreadSheetのIDを取得し、`.env.local`の`REGISTER_SHEET_ID`に設定する(もしくはSecretManagerを用いてください)
+
+## API設定シート(名前任意)
+1. Google SpreadSheetを作成
+2. 作成したSpreadSheetを`GOOGLE_SERVICE_ACCOUNT_EMAIL`のアドレスに共有設定する
+3. シート`registerPeriod`、`maxTeamAmount`の2つを作成する
+
+### registerPeriodシートの設定
+| startDate | endDate | Ignore(debug) |
+|-----------|---------|---------------|
+| 2025-11-14T00:00:00+09:00 | 2025-12-04T23:59:59+09:00 | YES           |
+
+### maxTeamAmountシートの設定
+| teamAmount |
+|------------|
+| 12         |
+
+# Google Documentの設定(Discord Link)
+1. Google Documentを作成
+2. 作成したDocumentの共有設定を公開設定にする(どうせリンク公開するので)
+3. `src/app/components/DiscordLink.tsx`の`docURL`にDocumentのURLを設定する
+
+# SpreadSheetのIDの取得方法
+Google SpreadSheetのURLに含まれる文字列がIDです。  
+URL例：`https://docs.google.com/spreadsheets/d/abcdefghijklmn123456789/edit?gid`  
+この場合のID：`abcdefghijklmn123456789`

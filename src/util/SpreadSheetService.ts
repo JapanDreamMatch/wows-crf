@@ -87,4 +87,13 @@ export class GoogleSpreadsheetService {
         await this.doc.loadInfo();
         return this.doc.sheetsByIndex.map((sheet) => sheet.title);
     }
+
+    /**
+     * 指定したタイトルのsheetを取得する
+     * @param sheetTitle
+     */
+    async getSheet(sheetTitle: string): Promise<GoogleSpreadsheetWorksheet> {
+        await this.doc.loadInfo();
+        return this.doc.sheetsByTitle[sheetTitle];
+    }
 }

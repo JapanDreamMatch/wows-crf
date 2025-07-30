@@ -13,5 +13,9 @@ https://cloud.google.com/run/docs/configuring/environment-variables?hl=ja
 Google Drive
 https://zenn.dev/tatsuyasusukida/articles/google-drive-write
 
+# 締め切り機能の概要
+- Spreadsheetには[ISO-8601 互換](https://qiita.com/kidatti/items/272eb962b5e6025fc51e)で記載
+- 
+
 # issueかも?
 - チーム略明が被るかも
