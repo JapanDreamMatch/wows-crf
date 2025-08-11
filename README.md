@@ -12,7 +12,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
-- react-hook-form
+- [react-hook-form](https://www.react-hook-form.com/api/)
 - yup
 - axios
 - google-auth-library
@@ -25,7 +25,6 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 API_SETTINGS_SHEET_ID=''
 DRIVE_FOLDER_ID='DriveFolderID'
 GOOGLE_APPLICATION_CREDENTIALS='FILEPATH/credentials.json'
-GOOGLE_CREDENTIALS='cledentials_json'
 GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
 GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
 REGISTER_SHEET_ID='sheetid'
