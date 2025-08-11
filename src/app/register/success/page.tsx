@@ -7,9 +7,9 @@ export default function Home() {
             <Box m={4} className="max-w-full">
                 <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                     <Heading size="lg" className="mb-4">送信に成功しました</Heading>
-                    <Link href="/register" className="">
+                    <Link href="/" className="">
                         <Button colorScheme="teal">
-                            フォームに戻る
+                            トップページに戻る
                         </Button>
                     </Link>
                 </Box>

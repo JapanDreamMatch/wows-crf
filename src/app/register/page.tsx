@@ -9,6 +9,7 @@ import Link from "next/link";
 
 export default function ContestantRegister() {
     const [status, setStatus] = useState<"loading" | "yes" | "no">("loading");
+    const [reason, setReason] = useState<"" | "period" | "amount">("");
     const [loadingDots, setLoadingDots] = useState<string>(".");
 
     useEffect(() => {
@@ -31,6 +32,7 @@ export default function ContestantRegister() {
                     setStatus("yes");
                 } else {
                     setStatus("no");
+                    setReason(res.data?.reason ?? "");
                 }
             } catch {
                 if (isMounted) setStatus("no");
@@ -68,11 +70,17 @@ export default function ContestantRegister() {
     }
 
     if (status === "no") {
+        let message = "現在は募集期間ではありません";
+        if (reason === "amount") {
+            message = "募集チームが上限に達しました";
+        } else if (reason === "period") {
+            message = "現在は募集期間ではありません";
+        }
         return (
             <div className="text-slate-100 bg-gray-800 min-h-screen">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
-                        <Heading size="lg" className="mb-4">現在は募集期間ではありません</Heading>
+                        <Heading size="lg" className="mb-4">{message}</Heading>
                         <Link href="/" className="">
                             <Button colorScheme="teal">
                                 トップに戻る

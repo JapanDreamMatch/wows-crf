@@ -23,7 +23,6 @@ export default function RegisterForm(){
     const {
         errors,
         isSubmitting,
-        isSubmitSuccessful
     } = methods.formState;
     const router = useRouter();
 
@@ -31,7 +30,7 @@ export default function RegisterForm(){
     const handleSubmit = async (data: registerType) => {
         try {
             await onSubmit(data);
-            router.push('/success');
+            router.push('/register/success');
         } catch (e: any) {
             router.push(`/register/error?msg=${encodeURIComponent(e.message || "内部エラーが発生しました")}`);
         }

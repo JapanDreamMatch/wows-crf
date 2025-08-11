@@ -10,7 +10,7 @@ import {IsIgnore} from "@/app/api/isApplication/isIgnore";
 export async function POST(req: NextRequest) {
 
     try {
-        const { REGISTER_SHEET_ID } = process.env;
+        const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
         const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID ?? "";
 
         const formData = await req.formData();
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
             .map(p => p.getWinRate())
             .filter((wr): wr is number => typeof wr === 'number');
         const teamWinRate = teamMemberWinRate
-            .reduce(function(prev, current, i ,arr){
+            .reduce(function(prev, current){
                 return prev+current;
             }) / teamMemberWinRate.length;
 
@@ -87,8 +87,40 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        //spreadsheetへの情報書き込み
+        // サーバーサイドでチーム略名のバリデーション（@を含む場合はエラー）
+        if (teamNickName.includes("@")) {
+            return NextResponse.json(
+                { message: "チーム略名に「@」は使用できません" },
+                { status: 500 }
+            );
+        }
+
+        // サーバーサイドでチーム略名の重複チェック（@を含むタブ名は除外）
         const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
+        const sheetNames = await spreadSheet.getSheetNames();
+        const validSheetNames = sheetNames.filter(name => !name.includes("@"));
+
+        // チーム数上限チェック
+        //チーム上限の設定取得
+        const settingsBook = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
+        const settingsSheet = await settingsBook.getSheet("maxTeamAmount");
+        await settingsSheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 2});
+        const MAX_TEAM_AMOUNT = Number(settingsSheet.getCell(1,0).value?.toString() ?? "0");
+        if (validSheetNames.length >= MAX_TEAM_AMOUNT) {
+            return NextResponse.json(
+                { message: "募集チーム数が上限に達したため締め切りました" },
+                { status: 503 }
+            );
+        }
+
+        if (validSheetNames.includes(teamNickName)) {
+            return NextResponse.json(
+                { message: "このチーム略名は既に登録されています" },
+                { status: 500 }
+            );
+        }
+
+        //spreadsheetへの情報書き込み
         await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
         await spreadSheet.addRows(teamNickName,sheetRows);
 
