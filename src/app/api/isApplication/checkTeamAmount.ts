@@ -9,9 +9,14 @@ export async function CheckTeamAmount(): Promise<boolean> {
     await settingsSheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 2});
     const maxAmount = Number(settingsSheet.getCell(1,0).value?.toString() ?? "0");
 
-    //チームの配列取得
+    //チームの配列取得（@を含む名前は除外）
     const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
     const sheetNames = await spreadSheet.getSheetNames();
+    const validSheetNames = sheetNames.filter(name => !name.includes("@"));
 
-    return Boolean(sheetNames.length < maxAmount);
+    console.log("Current team count:", validSheetNames.length);
+    console.log("Maximum team count:", maxAmount);
+    console.log("return bool:", Boolean(validSheetNames.length < maxAmount));
+
+    return Boolean(validSheetNames.length < maxAmount);
 }

@@ -23,7 +23,6 @@ export default function RegisterForm(){
     const {
         errors,
         isSubmitting,
-        isSubmitSuccessful
     } = methods.formState;
     const router = useRouter();
 

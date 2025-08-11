@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
             .map(p => p.getWinRate())
             .filter((wr): wr is number => typeof wr === 'number');
         const teamWinRate = teamMemberWinRate
-            .reduce(function(prev, current, i ,arr){
+            .reduce(function(prev, current){
                 return prev+current;
             }) / teamMemberWinRate.length;
 
