@@ -7,5 +7,8 @@ export async function POST(req: NextRequest) {
     const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
     const sheetNames = await spreadSheet.getSheetNames();
 
-    return NextResponse.json({ isExist: sheetNames.includes(teamNickName) });
+    // @を含むタブ名は除外
+    const validSheetNames = sheetNames.filter(name => !name.includes("@"));
+
+    return NextResponse.json({ isExist: validSheetNames.includes(teamNickName) });
 }
