@@ -2,6 +2,7 @@
 
 # Copilot
 copilotDiffState.xml
+.idea/copilot*
 
 # dependencies
 /node_modules
