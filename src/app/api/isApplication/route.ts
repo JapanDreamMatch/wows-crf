@@ -10,14 +10,7 @@ export async function POST() {
 
     if(isIgnore || (checkTime && checkTeamAmount)){
         return NextResponse.json({canRegister: "YES"});
-    }else{
-        // 理由を返す
-        let reason = "";
-        if (!checkTime) {
-            reason = "period";
-        } else if (!checkTeamAmount) {
-            reason = "amount";
-        }
-        return NextResponse.json({ canRegister: "NO", reason });
+    }else {
+        return NextResponse.json({canRegister: "NO"});
     }
 }
