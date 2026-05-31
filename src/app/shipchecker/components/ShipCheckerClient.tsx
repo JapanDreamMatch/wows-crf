@@ -87,8 +87,10 @@ type ShipCheckerText = {
     nameSearch: string;
     nameSearchPlaceholder: string;
     shipType: string;
+    tier: string;
     country: string;
     allFilter: string;
+    excludeUnselectableShips: string;
     searchResult: (count: number) => string;
     aliasesLabel: (aliases: string) => string;
     modelShipLabel: (model: string) => string;
@@ -125,8 +127,10 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         nameSearch: "Name search",
         nameSearchPlaceholder: "e.g. Shimakaze",
         shipType: "Ship type",
+        tier: "Tier",
         country: "Country",
         allFilter: "All",
+        excludeUnselectableShips: "Hide ships that cannot be selected",
         searchResult: (count) => `Search result: ${count} ships`,
         aliasesLabel: (aliases) => `Aliases: ${aliases}`,
         modelShipLabel: (model) => `Model ship: ${model}`,
@@ -161,8 +165,10 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         nameSearch: "艦名検索",
         nameSearchPlaceholder: "例: 島風 / Shimakaze",
         shipType: "艦種",
+        tier: "Tier",
         country: "国家",
         allFilter: "すべて",
+        excludeUnselectableShips: "選択できない艦艇を除外",
         searchResult: (count) => `検索結果: ${count} 隻`,
         aliasesLabel: (aliases) => `別名: ${aliases}`,
         modelShipLabel: (model) => `モデル艦: ${model}`,
@@ -429,7 +435,9 @@ export default function ShipCheckerClient() {
 
     const [nameFilter, setNameFilter] = useState<string>("");
     const [typeFilter, setTypeFilter] = useState<ShipType | typeof ALL_FILTER>(ALL_FILTER);
+    const [tierFilter, setTierFilter] = useState<number | typeof ALL_FILTER>(10);
     const [countryFilter, setCountryFilter] = useState<string>(ALL_FILTER);
+    const [excludeUnselectableShips, setExcludeUnselectableShips] = useState<boolean>(false);
 
     const [selectedEntries, setSelectedEntries] = useState<SelectedShipEntry[]>([]);
 
@@ -496,6 +504,10 @@ export default function ShipCheckerClient() {
                 return false;
             }
 
+            if (tierFilter !== ALL_FILTER && ship.tier !== tierFilter) {
+                return false;
+            }
+
             if (countryFilter !== ALL_FILTER && ship.country !== countryFilter) {
                 return false;
             }
@@ -506,7 +518,7 @@ export default function ShipCheckerClient() {
 
             return true;
         });
-    }, [countryFilter, data, nameFilter, typeFilter]);
+    }, [countryFilter, data, nameFilter, tierFilter, typeFilter]);
 
     const evaluation = useMemo(() => {
         if (!data) {
@@ -564,6 +576,40 @@ export default function ShipCheckerClient() {
         ];
     }, [data, text.allFilter]);
 
+    const tierFilterOptions = useMemo<DropdownOption[]>(() => {
+        if (!data) {
+            return [
+                {
+                    value: ALL_FILTER,
+                    label: text.allFilter,
+                },
+                {
+                    value: "10",
+                    label: text.tierLabel(10),
+                },
+            ];
+        }
+
+        const tiers = Array.from(
+            new Set(data.ships.map((ship) => ship.tier).filter((tier): tier is number => typeof tier === "number")),
+        ).sort((a, b) => b - a);
+
+        if (!tiers.includes(10)) {
+            tiers.unshift(10);
+        }
+
+        return [
+            {
+                value: ALL_FILTER,
+                label: text.allFilter,
+            },
+            ...tiers.map((tier) => ({
+                value: String(tier),
+                label: text.tierLabel(tier),
+            })),
+        ];
+    }, [data, text]);
+
     const addAvailabilityMap = useMemo(() => {
         const map = new Map<string, ReturnType<typeof getAddAvailability>>();
         if (!data) {
@@ -577,13 +623,16 @@ export default function ShipCheckerClient() {
         return map;
     }, [data, filteredShips, locale, selectedEntries]);
 
-    const handleAddShip = (ship: ShipData) => {
-        if (!data) {
-            return;
+    const visibleShips = useMemo(() => {
+        if (!excludeUnselectableShips) {
+            return filteredShips;
         }
 
-        const addAvailability = getAddAvailability(selectedEntries, ship, data.rules, locale);
-        if (!addAvailability.allowed) {
+        return filteredShips.filter((ship) => addAvailabilityMap.get(ship.id)?.allowed ?? true);
+    }, [addAvailabilityMap, excludeUnselectableShips, filteredShips]);
+
+    const handleAddShip = (ship: ShipData) => {
+        if (!data) {
             return;
         }
 
@@ -766,7 +815,7 @@ export default function ShipCheckerClient() {
                     <section className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
                         <h2 className="text-lg font-semibold">{text.availableShips}</h2>
 
-                        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+                        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
                             <div>
                                 <label htmlFor="ship-name-filter" className="mb-1 block text-xs text-slate-300">
                                     {text.nameSearch}
@@ -799,16 +848,44 @@ export default function ShipCheckerClient() {
                                     onChange={(value) => setCountryFilter(value)}
                                 />
                             </div>
+
+                            <div>
+                                <IconFilterDropdown
+                                    id="ship-tier-filter"
+                                    label={text.tier}
+                                    value={String(tierFilter)}
+                                    options={tierFilterOptions}
+                                    onChange={(value) => {
+                                        if (value === ALL_FILTER) {
+                                            setTierFilter(ALL_FILTER);
+                                            return;
+                                        }
+
+                                        const parsedTier = Number(value);
+                                        if (Number.isFinite(parsedTier)) {
+                                            setTierFilter(parsedTier);
+                                        }
+                                    }}
+                                />
+                            </div>
+
                         </div>
 
-                        <p className="mt-3 text-xs text-slate-400">{text.searchResult(filteredShips.length)}</p>
+                        <div className="mt-2">
+                            <label className="inline-flex items-center gap-2 rounded border border-slate-600 bg-slate-950 px-2 py-2 text-xs text-slate-200">
+                                <input
+                                    type="checkbox"
+                                    checked={excludeUnselectableShips}
+                                    onChange={(event) => setExcludeUnselectableShips(event.target.checked)}
+                                />
+                                <span>{text.excludeUnselectableShips}</span>
+                            </label>
+                        </div>
+
+                        <p className="mt-3 text-xs text-slate-400">{text.searchResult(visibleShips.length)}</p>
 
                         <div className="mt-3 max-h-[70vh] space-y-2 overflow-y-auto pr-1">
-                            {filteredShips.map((ship) => {
-                                const addAvailability = addAvailabilityMap.get(ship.id) ?? {
-                                    allowed: true,
-                                    reason: "",
-                                };
+                            {visibleShips.map((ship) => {
                                 const selectedCount = selectedCountByShipId.get(ship.id) ?? 0;
 
                                 return (
@@ -852,18 +929,10 @@ export default function ShipCheckerClient() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleAddShip(ship)}
-                                                    disabled={!addAvailability.allowed}
-                                                    className={`rounded px-3 py-1 text-xs font-medium ${
-                                                        addAvailability.allowed
-                                                            ? "bg-cyan-700 hover:bg-cyan-600"
-                                                            : "cursor-not-allowed bg-slate-600 text-slate-300"
-                                                    }`}
+                                                    className="rounded bg-cyan-700 px-3 py-1 text-xs font-medium hover:bg-cyan-600"
                                                 >
                                                     {text.addButton}
                                                 </button>
-                                                {!addAvailability.allowed && addAvailability.reason && (
-                                                    <p className="mt-1 max-w-44 text-xs text-rose-300">{addAvailability.reason}</p>
-                                                )}
                                             </div>
                                         </div>
                                     </article>
