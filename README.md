@@ -29,6 +29,7 @@ GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE K
 GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
 REGISTER_SHEET_ID='sheetid'
 WOWS_API_APP_ID="appid"
+SHIP_AND_RULES_SHEET_ID=''
 ```
 
 # Google SpreadSheetの設定
