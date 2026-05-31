@@ -270,6 +270,7 @@ export function evaluateShipRules(
     locale: ShipCheckerLocale = DEFAULT_LOCALE,
 ): RuleEvaluation {
     const counters: RuleCounter[] = [];
+    const sheetBanCount = entries.filter((entry) => entry.ship.isBan).length;
 
     counters.push({
         id: "shipamount",
@@ -277,6 +278,17 @@ export function evaluateShipRules(
         actual: entries.length,
         limit: ruleSet.shipAmount,
         isViolation: entries.length > ruleSet.shipAmount,
+    });
+
+    counters.push({
+        id: "sheet-ban",
+        label:
+            locale === "ja"
+                ? "シートBAN艦艇が含まれていない"
+                : "No sheet-banned ships are included",
+        actual: sheetBanCount,
+        limit: 0,
+        isViolation: sheetBanCount > 0,
     });
 
     for (const rule of ruleSet.rules) {
