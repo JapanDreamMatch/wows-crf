@@ -3,6 +3,7 @@ export const SHIP_TYPES = ["dd", "cr", "bb", "cv", "sb"] as const;
 export type ShipType = (typeof SHIP_TYPES)[number];
 export type RadarCapability = "Default" | "Optional" | "No";
 export type RuleKind = "namePattern" | "shipName" | "country" | "type" | "feature" | "special";
+export type ShipCheckerLocale = "en" | "ja";
 
 export interface ShipData {
     id: string;
@@ -64,6 +65,7 @@ export const SHIP_TYPE_LABELS: Record<ShipType, string> = {
 };
 
 const SHIP_TYPE_SET = new Set<string>(SHIP_TYPES);
+const DEFAULT_LOCALE: ShipCheckerLocale = "en";
 
 function normalizeText(value: string): string {
     return value.trim().toLowerCase();
@@ -164,52 +166,64 @@ function countMatches(rule: ShipRule, entries: SelectedShipEntry[]): number {
     return 0;
 }
 
-function getFeatureLabel(target: string): string {
+function getFeatureLabel(target: string, locale: ShipCheckerLocale): string {
     const normalized = normalizeText(target);
     if (normalized === "hasrader") {
-        return "Radar capable ships";
+        return locale === "ja" ? "レーダー搭載可能艦" : "Radar capable ships";
     }
     if (normalized === "hasaircraft") {
-        return "Ships with controllable aircraft";
+        return locale === "ja" ? "操作可能な航空機を持つ艦艇" : "Ships with controllable aircraft";
     }
     return target;
 }
 
-function getSpecialLabel(target: string): string {
+function getSpecialLabel(target: string, locale: ShipCheckerLocale): string {
     const normalized = normalizeText(target);
     if (normalized === "allrader") {
-        return "Ships actually sailing with radar";
+        return locale === "ja" ? "実際にレーダーを使用する艦艇" : "Ships actually sailing with radar";
     }
     if (normalized === "tier11") {
-        return "Tier 11 ships";
+        return locale === "ja" ? "Tier 11 艦艇" : "Tier 11 ships";
     }
     return target;
 }
 
-export function getRuleLabel(rule: ShipRule): string {
+export function getRuleLabel(rule: ShipRule, locale: ShipCheckerLocale = DEFAULT_LOCALE): string {
     if (rule.kind === "namePattern") {
+        if (locale === "ja") {
+            return `艦名パターン (${rule.targets.join(", ")}) <= ${rule.limit}`;
+        }
         return `Name pattern (${rule.targets.join(", ")}) <= ${rule.limit}`;
     }
 
     if (rule.kind === "shipName") {
+        if (locale === "ja") {
+            return `艦名 (${rule.targets.join(", ")}) <= ${rule.limit}`;
+        }
         return `Ship names (${rule.targets.join(", ")}) <= ${rule.limit}`;
     }
 
     if (rule.kind === "country") {
+        if (locale === "ja") {
+            return `国家 (${rule.targets.join(", ")}) <= ${rule.limit}`;
+        }
         return `Countries (${rule.targets.join(", ")}) <= ${rule.limit}`;
     }
 
     if (rule.kind === "type") {
+        if (locale === "ja") {
+            return `艦種 (${rule.targets.join(", ")}) <= ${rule.limit}`;
+        }
         return `Ship types (${rule.targets.join(", ")}) <= ${rule.limit}`;
     }
 
     if (rule.kind === "feature") {
-        const labels = rule.targets.map((target) => getFeatureLabel(target));
+        const labels = rule.targets.map((target) => getFeatureLabel(target, locale));
         return `${labels.join(" + ")} <= ${rule.limit}`;
     }
 
     if (rule.kind === "special") {
-        const labels = rule.targets.map((target) => getSpecialLabel(target));
+        const labels = rule.targets.map((target) => getSpecialLabel(target, locale));
         return `${labels.join(" + ")} <= ${rule.limit}`;
     }
 
@@ -250,12 +264,16 @@ export function classifyRuleKind(tokens: string[], countries: string[]): RuleKin
     return "shipName";
 }
 
-export function evaluateShipRules(entries: SelectedShipEntry[], ruleSet: ShipRuleSet): RuleEvaluation {
+export function evaluateShipRules(
+    entries: SelectedShipEntry[],
+    ruleSet: ShipRuleSet,
+    locale: ShipCheckerLocale = DEFAULT_LOCALE,
+): RuleEvaluation {
     const counters: RuleCounter[] = [];
 
     counters.push({
         id: "shipamount",
-        label: `Ship amount <= ${ruleSet.shipAmount}`,
+        label: locale === "ja" ? `艦艇数 <= ${ruleSet.shipAmount}` : `Ship amount <= ${ruleSet.shipAmount}`,
         actual: entries.length,
         limit: ruleSet.shipAmount,
         isViolation: entries.length > ruleSet.shipAmount,
@@ -265,7 +283,7 @@ export function evaluateShipRules(entries: SelectedShipEntry[], ruleSet: ShipRul
         const actual = countMatches(rule, entries);
         counters.push({
             id: rule.id,
-            label: getRuleLabel(rule),
+            label: getRuleLabel(rule, locale),
             actual,
             limit: rule.limit,
             isViolation: actual > rule.limit,
@@ -280,18 +298,22 @@ export function getAddAvailability(
     currentEntries: SelectedShipEntry[],
     candidateShip: ShipData,
     ruleSet: ShipRuleSet,
+    locale: ShipCheckerLocale = DEFAULT_LOCALE,
 ): AddAvailability {
     if (candidateShip.isBan) {
         return {
             allowed: false,
-            reason: "This ship is banned in the sheet.",
+            reason: locale === "ja" ? "この艦艇はシート上でBANされています。" : "This ship is banned in the sheet.",
         };
     }
 
     if (currentEntries.length >= ruleSet.shipAmount) {
         return {
             allowed: false,
-            reason: `Ship amount limit reached (${ruleSet.shipAmount}).`,
+            reason:
+                locale === "ja"
+                    ? `艦艇数の上限に達しています (${ruleSet.shipAmount})。`
+                    : `Ship amount limit reached (${ruleSet.shipAmount}).`,
         };
     }
 
@@ -303,13 +325,13 @@ export function getAddAvailability(
         },
     ];
 
-    const simulatedResult = evaluateShipRules(simulatedEntries, ruleSet);
+    const simulatedResult = evaluateShipRules(simulatedEntries, ruleSet, locale);
     const firstViolation = simulatedResult.violations[0];
 
     if (firstViolation) {
         return {
             allowed: false,
-            reason: `Would violate: ${firstViolation.label}`,
+            reason: locale === "ja" ? `違反します: ${firstViolation.label}` : `Would violate: ${firstViolation.label}`,
         };
     }
 
