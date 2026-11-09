@@ -177,10 +177,10 @@ export default function TeamUpdatePage() {
     };
 
     return (
-        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
             <Box m={4} className="max-w-full">
                 {/* Phase 1: チーム認証 */}
-                <Box borderWidth="1px" borderRadius="lg" className="max-w-3xl p-4 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+                <Box borderWidth="1px" borderRadius="lg" className="max-w-3xl p-4 mx-auto my-4 bg-slate-50 dark:bg-transparent border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
                         className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4 pb-2"
@@ -256,11 +256,11 @@ export default function TeamUpdatePage() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-slate-50 dark:bg-transparent border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4 pb-1"
                                 >
                                     チーム概要
                                 </Heading>
@@ -338,11 +338,11 @@ export default function TeamUpdatePage() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-slate-50 dark:bg-transparent border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4 pb-1"
                                 >
                                     出場者
                                 </Heading>
@@ -414,11 +414,11 @@ export default function TeamUpdatePage() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-slate-50 dark:bg-transparent border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4 pb-1"
                                 >
                                     その他ご意見ご質問
                                 </Heading>

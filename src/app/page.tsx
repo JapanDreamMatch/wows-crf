@@ -101,7 +101,7 @@ const navItems = [
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 py-16 md:p-24 text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 w-full transition-colors duration-200">
+    <main className="flex min-h-screen flex-col items-center justify-center px-6 py-16 md:p-24 text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 w-full transition-colors duration-200">
       <Box className="w-full max-w-5xl mx-auto">
         <VStack gap={3} className="mb-12 text-center">
           <Text className="text-teal-600 dark:text-teal-400 font-semibold tracking-wider text-sm uppercase">
@@ -127,7 +127,7 @@ export default function Home() {
               <Box
                 borderWidth="1px"
                 borderRadius="xl"
-                className="h-full p-6 bg-white dark:bg-gray-900/60 border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none transition-all duration-200 flex flex-col justify-between hover:border-teal-500 dark:hover:border-teal-400 hover:bg-teal-50/40 dark:hover:bg-gray-700/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/10 dark:hover:shadow-teal-950/30 group-focus-visible:ring-2 group-focus-visible:ring-teal-500 dark:group-focus-visible:ring-teal-400"
+                className="h-full p-6 bg-slate-50 dark:bg-gray-900/60 border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none transition-all duration-200 flex flex-col justify-between hover:border-teal-500 dark:hover:border-teal-400 hover:bg-teal-50/60 dark:hover:bg-gray-700/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/10 dark:hover:shadow-teal-950/30 group-focus-visible:ring-2 group-focus-visible:ring-teal-500 dark:group-focus-visible:ring-teal-400"
               >
                 <div>
                   <div className="flex items-center justify-between mb-5">
