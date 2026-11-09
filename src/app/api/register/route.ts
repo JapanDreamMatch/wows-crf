@@ -7,6 +7,7 @@ import {CheckTeamAmount} from "@/app/api/isApplication/checkTeamAmount";
 import {IsIgnore} from "@/app/api/isApplication/isIgnore";
 import {CloudStorageService} from "@/util/StorageService";
 import {detectImageType, MAX_LOGO_SIZE, DetectedImage} from "@/util/ImageValidator";
+import {generateSalt, hashPassword, MIN_PASSWORD_LENGTH} from "@/util/Argon2Service";
 
 export async function POST(req: NextRequest) {
 
@@ -23,6 +24,15 @@ export async function POST(req: NextRequest) {
         }
 
         const formData = await req.formData();
+
+        // パスワードバリデーション
+        const password = (formData.get("password") as string) ?? "";
+        if (password.length < MIN_PASSWORD_LENGTH) {
+            return NextResponse.json(
+                { message: `パスワードは${MIN_PASSWORD_LENGTH}文字以上で入力してください` },
+                { status: 400 }
+            );
+        }
 
         // (2) 画像検証（Player API 呼び出しの前）
         const logos = formData
@@ -80,28 +90,6 @@ export async function POST(req: NextRequest) {
         const ign10 = formData.get("player10") as string;
         const comment = formData.get("comment") as string;
 
-        //プレイヤーの取得
-        const players = await Promise.all([
-            new Player(ign1).getInstance(),
-            new Player(ign2).getInstance(),
-            new Player(ign3).getInstance(),
-            new Player(ign4).getInstance(),
-            new Player(ign5).getInstance(),
-            new Player(ign6).getInstance(),
-            new Player(ign7).getInstance(),
-            new Player(ign8).getInstance(),
-            new Player(ign9).getInstance(),
-            new Player(ign10).getInstance()
-        ]);
-
-        const teamMemberWinRate = players
-            .map(p => p.getWinRate())
-            .filter((wr): wr is number => typeof wr === 'number');
-        const teamWinRate = teamMemberWinRate
-            .reduce(function(prev, current){
-                return prev+current;
-            }) / teamMemberWinRate.length;
-
         // サーバーサイドでチーム略名のバリデーション（@を含む場合はエラー）
         if (teamNickName.includes("@")) {
             return NextResponse.json(
@@ -135,6 +123,31 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // ソルト生成 & Argon2idハッシュ計算
+        const salt = generateSalt();
+        const hash = await hashPassword(password, salt);
+
+        //プレイヤーの取得
+        const players = await Promise.all([
+            new Player(ign1).getInstance(),
+            new Player(ign2).getInstance(),
+            new Player(ign3).getInstance(),
+            new Player(ign4).getInstance(),
+            new Player(ign5).getInstance(),
+            new Player(ign6).getInstance(),
+            new Player(ign7).getInstance(),
+            new Player(ign8).getInstance(),
+            new Player(ign9).getInstance(),
+            new Player(ign10).getInstance()
+        ]);
+
+        const teamMemberWinRate = players
+            .map(p => p.getWinRate())
+            .filter((wr): wr is number => typeof wr === 'number');
+        const teamWinRate = teamMemberWinRate.length > 0
+            ? teamMemberWinRate.reduce((prev, current) => prev + current, 0) / teamMemberWinRate.length
+            : 0;
+
         // ロゴ保存先ディレクトリの取得 (logo_directory シート)
         let logoDirectory = "logos";
         try {
@@ -165,19 +178,24 @@ export async function POST(req: NextRequest) {
                     ID: teamName,
                     WinRate: teamWinRate,
                     Contact: contact,
-                    Comment: comment
+                    Comment: comment,
+                    LogoURL: uploaded?.url ?? "", // G2セル
+                    SaltAndHash: salt,            // H2セル (Salt)
                 }
             ];
             for(let i = 0; i < players.length; i++){
-                sheetRows.push(
-                    {
-                        Type: `player${i+1}`,
-                        IGN: players[i].getIgn(),
-                        ID: players[i].getUid() ?? "undefined",
-                        WinRate: players[i].getWinRate() ?? "undefined",
-                        Comment: i === 0 ? (uploaded?.url ?? "") : "", // F3セル (player1行のComment列)
-                    }
-                );
+                const row: Record<string, string | number | boolean> = {
+                    Type: `player${i+1}`,
+                    IGN: players[i].getIgn(),
+                    ID: players[i].getUid() ?? "undefined",
+                    WinRate: players[i].getWinRate() ?? "undefined",
+                };
+                if (i === 0) {
+                    row.SaltAndHash = hash; // H3セル (Hash)
+                } else if (i === 1) {
+                    row.SaltAndHash = 0;    // H4セル (失敗回数初期値 0)
+                }
+                sheetRows.push(row);
             }
 
             //spreadsheetへの情報書き込み

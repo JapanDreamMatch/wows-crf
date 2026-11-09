@@ -1,11 +1,12 @@
 "use client"
 
-import {Box, Button, Heading} from "@chakra-ui/react";
+import {Box, Button, Heading, Text} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
 import {registerType, useRegisterForm} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamNameInput from "@/app/register/components/TeamNameInput";
 import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
+import PasswordInput from "@/app/register/components/PasswordInput";
 import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
@@ -60,6 +61,14 @@ export default function RegisterForm(){
                         <TeamNickNameInput
                             rhfName={"teamNickname"}
                             errorMsg={errors.teamNickname && errors.teamNickname.message}
+                        />
+
+                        {/* 出場者変更用パスワード */}
+                        <PasswordInput
+                            rhfName={"password"}
+                            confirmRhfName={"passwordConfirm"}
+                            errorMsg={errors.password && errors.password.message}
+                            confirmErrorMsg={errors.passwordConfirm && errors.passwordConfirm.message}
                         />
 
                         {/* チームロゴ */}
@@ -185,7 +194,7 @@ export default function RegisterForm(){
 
                 {/* 送信ボタン */}
                 <Box borderWidth='0px'
-                     className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex items-center justify-center">
+                     className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex flex-col items-center justify-center">
                     <Button
                         colorScheme='teal'
                         size='lg'
@@ -197,6 +206,11 @@ export default function RegisterForm(){
                         {isSubmitting && <span className="spinner-border spinner-border-sm mr-1"></span>}
                         送信
                     </Button>
+                    {isSubmitting && (
+                        <Text className="mt-3 text-teal-300 font-bold text-center">
+                            送信中。しばらくお待ちください
+                        </Text>
+                    )}
                 </Box>
 
             </form>

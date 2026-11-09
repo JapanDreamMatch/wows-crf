@@ -6,6 +6,8 @@ import {SubmitHandler} from "react-hook-form";
 export const registerSchema = object({
     teamName: string(),
     teamNickname: string(),
+    password: string(),
+    passwordConfirm: string(),
     teamLogo: yup.mixed<FileList | File>().nullable().notRequired(),
     contact: string(),
     player1: string(),
@@ -35,6 +37,7 @@ export const onSubmit: SubmitHandler<registerType> = async (formData) => {
     const sendData = new FormData();
     sendData.append("teamName", formData.teamName ?? "");
     sendData.append("teamNickname", formData.teamNickname ?? "");
+    sendData.append("password", formData.password ?? "");
     sendData.append("teamLogo", logo ?? new Blob());
     sendData.append("contact", formData.contact ?? "");
     sendData.append("player1", formData.player1 ?? "");

@@ -4,10 +4,12 @@ export const REGISTER_HEADER = [
     "ID",
     "WinRate",
     "Contact",
-    "Comment"
-]
+    "Comment",
+    "LogoURL",
+    "SaltAndHash"
+];
 export const REGISTER_PERIOD = [
     "StartDate",
     "EndDate",
     "Ignore(debug)",
-]
+];

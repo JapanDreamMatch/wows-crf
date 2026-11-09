@@ -18,6 +18,12 @@ export default function Home() {
                         登録フォーム
                     </Button>
                 </Link>
+
+                <Link href="/update" className="w-1/2">
+                    <Button variant="outlined" className="border border-slate-400 ... hover:bg-slate-600">
+                        出場者の変更
+                    </Button>
+                </Link>
             </VStack>
 
         </div>
