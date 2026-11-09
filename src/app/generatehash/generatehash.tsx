@@ -65,9 +65,9 @@ export default function GenerateHashClient() {
     };
 
     return (
-        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-8 transition-colors duration-200">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 min-h-screen py-8 transition-colors duration-200">
             <Box className="max-w-3xl p-4 mx-auto">
-                <Box borderWidth="1px" borderRadius="lg" className="p-6 my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+                <Box borderWidth="1px" borderRadius="lg" className="p-6 my-4 bg-slate-50 dark:bg-transparent border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
                         className="text-center border-b-2 border-slate-300 dark:border-slate-400 pb-2 mb-6"

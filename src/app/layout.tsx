@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -35,12 +36,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="jp" className="dark bg-slate-50 dark:bg-gray-800" suppressHydrationWarning>
+    <html lang="jp" className="dark bg-slate-200 dark:bg-gray-800" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${inter.className} !bg-slate-50 dark:!bg-gray-800 !text-slate-900 dark:!text-slate-100 transition-colors duration-200`}>
+      <body className={`${inter.className} !bg-slate-200 dark:!bg-gray-800 !text-slate-900 dark:!text-slate-100 transition-colors duration-200`}>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         <ThemeProvider>
           {children}
           <ThemeToggle />

@@ -17,11 +17,21 @@ html.light {
 }
 
 body {
-  background-color: #f8fafc;
+  background-color: #e2e8f0;
   color: #0f172a;
 }
 
 html.dark body {
+  background-color: #1f2937;
+  color: #f1f5f9;
+}
+
+html.light {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+html.dark {
   background-color: #1f2937;
   color: #f1f5f9;
 }

@@ -668,8 +668,8 @@ export default function ShipCheckerClient() {
 
     if (status === "loading") {
         return (
-            <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-                <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-6 shadow-sm dark:shadow-none">
+            <main className="min-h-screen bg-slate-200 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+                <div className="mx-auto max-w-5xl rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-6 shadow-sm dark:shadow-none">
                     {text.loadingData}
                 </div>
             </main>
@@ -678,7 +678,7 @@ export default function ShipCheckerClient() {
 
     if (status === "error" || !data) {
         return (
-            <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+            <main className="min-h-screen bg-slate-200 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
                 <div className="mx-auto max-w-5xl rounded-lg border border-rose-400 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 p-6">
                     <p>{displayedErrorMessage}</p>
                     <div className="mt-4">
@@ -692,9 +692,9 @@ export default function ShipCheckerClient() {
     }
 
     return (
-        <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-3 py-4 text-slate-900 dark:text-slate-100 md:px-6 md:py-6 transition-colors duration-200">
+        <main className="min-h-screen bg-slate-200 dark:bg-gray-800 px-3 py-4 text-slate-900 dark:text-slate-100 md:px-6 md:py-6 transition-colors duration-200">
             <div className="mx-auto max-w-[1220px] space-y-4">
-                <header className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
+                <header className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <div className="flex flex-wrap items-baseline gap-2.5">
@@ -737,7 +737,7 @@ export default function ShipCheckerClient() {
                 </header>
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
+                    <section className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                         <h2 className="text-lg font-semibold">{text.selectedShips}</h2>
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{text.selectedAmount(selectedEntries.length, data.rules.shipAmount)}</p>
 
@@ -748,7 +748,7 @@ export default function ShipCheckerClient() {
                         ) : (
                             <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto pr-1">
                                 {selectedEntries.map((entry, index) => (
-                                    <article key={`${entry.ship.id}-${index}`} className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
+                                    <article key={`${entry.ship.id}-${index}`} className="rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-950/40 p-3">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="space-y-1">
                                                 <p className="text-sm font-semibold">{text.slotLabel(index + 1, entry.ship.displayName)}</p>
@@ -793,7 +793,7 @@ export default function ShipCheckerClient() {
                             </div>
                         )}
 
-                        <div className="mt-4 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
+                        <div className="mt-4 rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-950/40 p-3">
                             <h3 className="text-sm font-semibold">{text.ruleCheck}</h3>
                             <div className="mt-2 max-h-56 overflow-y-auto pr-1 text-sm">
                                 {evaluation?.counters.map((counter) => (
@@ -820,7 +820,7 @@ export default function ShipCheckerClient() {
                         </div>
                     </section>
 
-                    <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
+                    <section className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                         <h2 className="text-lg font-semibold">{text.availableShips}</h2>
 
                         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
@@ -897,7 +897,7 @@ export default function ShipCheckerClient() {
                                 const selectedCount = selectedCountByShipId.get(ship.id) ?? 0;
 
                                 return (
-                                    <article key={ship.id} className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
+                                    <article key={ship.id} className="rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-950/40 p-3">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="space-y-1">
                                                 <p className="text-sm font-semibold">{ship.displayName}</p>
