@@ -14,7 +14,7 @@ export default function RegisterErrorPageClient() {
                 <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                     <Heading size="lg" className="mb-4">エラーが発生しました</Heading>
                     <Text color="red.400" className="mb-6">{msg}</Text>
-                    <Button colorScheme="teal" onClick={() => router.push("/register")}>
+                    <Button colorPalette="teal" onClick={() => router.push("/register")}>
                         フォームに戻る
                     </Button>
                 </Box>

@@ -14,12 +14,12 @@ export default function UpdateSuccessPage() {
                     <Heading size="lg" className="mb-4">
                         出場者情報の変更が完了しました
                     </Heading>
-                    <VStack spacing={4}>
+                    <VStack gap={4}>
                         <Link href="/update">
-                            <Button colorScheme="blue">出場者の変更画面に戻る</Button>
+                            <Button colorPalette="blue">出場者の変更画面に戻る</Button>
                         </Link>
                         <Link href="/">
-                            <Button colorScheme="teal">トップページに戻る</Button>
+                            <Button colorPalette="teal">トップページに戻る</Button>
                         </Link>
                     </VStack>
                 </Box>

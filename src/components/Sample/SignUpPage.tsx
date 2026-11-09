@@ -3,7 +3,7 @@
 import yup, {object, string} from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
-import {Button, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
+import {Button, Field, Input} from "@chakra-ui/react";
 
 //yupスキーマ
 const schema2 = object({
@@ -32,17 +32,17 @@ export default function SignUpPage(){
         <>
             <h1>テストフォーム</h1>
             <form onSubmit={handleSubmit(onSubmit)}>
-                <FormControl isInvalid={!!errors.username}>
-                    <FormLabel>ユーザーネーム</FormLabel>
+                <Field.Root invalid={!!errors.username}>
+                    <Field.Label>ユーザーネーム</Field.Label>
                     <Input
                         id="name"
                         placeholder="please input your username"
                         {...register("username")}
                     />
-                    <FormErrorMessage>
+                    <Field.ErrorText>
                         {errors.username && errors.username.message}
-                    </FormErrorMessage>
-                </FormControl>
+                    </Field.ErrorText>
+                </Field.Root>
                 <Button>送信</Button>
             </form>
         </>

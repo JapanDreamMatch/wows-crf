@@ -103,7 +103,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6 py-16 md:p-24 text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 w-full transition-colors duration-200">
       <Box className="w-full max-w-5xl mx-auto">
-        <VStack spacing={3} className="mb-12 text-center">
+        <VStack gap={3} className="mb-12 text-center">
           <Text className="text-teal-600 dark:text-teal-400 font-semibold tracking-wider text-sm uppercase">
             Japan Dream Match
           </Text>
@@ -115,7 +115,7 @@ export default function Home() {
           </Text>
         </VStack>
 
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} className="w-full">
+        <SimpleGrid columns={{ base: 1, md: 2 }} gap={6} className="w-full">
           {navItems.map((item) => (
             <Link
               key={item.href}

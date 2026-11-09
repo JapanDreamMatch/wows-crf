@@ -82,7 +82,7 @@ export default function ContestantRegister() {
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                         <Heading size="lg" className="mb-4">{message}</Heading>
                         <Link href="/" className="">
-                            <Button colorScheme="teal">
+                            <Button colorPalette="teal">
                                 トップに戻る
                             </Button>
                         </Link>

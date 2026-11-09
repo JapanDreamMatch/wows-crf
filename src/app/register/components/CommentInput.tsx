@@ -1,5 +1,5 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
-import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
+import {Box, Field, Input} from "@chakra-ui/react";
 
 export default function CommentInput<T extends FieldValues = never>(
     {
@@ -17,10 +17,10 @@ export default function CommentInput<T extends FieldValues = never>(
 
 
     return(
-        <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
-            <Box borderWidth='0px' borderRadius='lg' className="p-2">
+        <Field.Root invalid={Boolean(errorMsg)} className="py-4">
+            <Box borderWidth='0px' borderRadius='lg' className="p-2 w-full">
                 <div className="mt-2">
-                    <FormLabel className="pl-2">その他のご意見またはご質問</FormLabel>
+                    <Field.Label className="pl-2">その他のご意見またはご質問</Field.Label>
                 </div>
                 <div>
                     <Input
@@ -28,9 +28,9 @@ export default function CommentInput<T extends FieldValues = never>(
                         placeholder="Please input Comment"
                         {...register(rhfName)}
                     />
-                    <FormErrorMessage>{errorMsg}</FormErrorMessage>
+                    <Field.ErrorText>{errorMsg}</Field.ErrorText>
                 </div>
             </Box>
-        </FormControl>
+        </Field.Root>
     );
 }

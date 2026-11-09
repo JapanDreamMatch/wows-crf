@@ -1,5 +1,5 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
-import {Box, FormControl, FormErrorMessage, FormLabel, Input, Text} from "@chakra-ui/react";
+import {Box, Field, Input, Text} from "@chakra-ui/react";
 import axios from "axios";
 
 export default function TeamNickNameInput<T extends FieldValues = never>(
@@ -18,10 +18,10 @@ export default function TeamNickNameInput<T extends FieldValues = never>(
 
 
     return(
-        <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
-            <Box borderWidth='0px' borderRadius='lg' className="p-2">
+        <Field.Root invalid={Boolean(errorMsg)} className="py-4">
+            <Box borderWidth='0px' borderRadius='lg' className="p-2 w-full">
                 <div className="mt-2">
-                    <FormLabel className="pl-2 mb-1">チーム略名</FormLabel>
+                    <Field.Label className="pl-2 mb-1">チーム略名</Field.Label>
                     <Text color="red.400" fontSize="sm" fontWeight="bold" className="pl-2 mb-2">
                         ※チーム略名は送信後変更ができません
                     </Text>
@@ -55,9 +55,9 @@ export default function TeamNickNameInput<T extends FieldValues = never>(
                             }
                         })}
                     />
-                    <FormErrorMessage>{errorMsg}</FormErrorMessage>
+                    <Field.ErrorText>{errorMsg}</Field.ErrorText>
                 </div>
             </Box>
-        </FormControl>
+        </Field.Root>
     );
 }

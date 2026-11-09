@@ -20,15 +20,18 @@ export default function SubmitProgressBox({ stepText, progress }: SubmitProgress
                     {clampedProgress}%
                 </Text>
             </div>
-            <Progress
+            <Progress.Root
                 value={clampedProgress}
                 size="sm"
-                colorScheme="teal"
-                borderRadius="full"
-                hasStripe
-                isAnimated
-                className="bg-slate-200 dark:bg-slate-700"
-            />
+                colorPalette="teal"
+                shape="full"
+                striped
+                animated
+            >
+                <Progress.Track className="bg-slate-200 dark:bg-slate-700">
+                    <Progress.Range />
+                </Progress.Track>
+            </Progress.Root>
         </Box>
     );
 }

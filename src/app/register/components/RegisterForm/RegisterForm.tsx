@@ -223,12 +223,12 @@ export default function RegisterForm(){
                 <Box borderWidth='0px'
                      className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex flex-col items-center justify-center">
                     <Button
-                        colorScheme='teal'
+                        colorPalette='teal'
                         size='lg'
                         type="submit"
                         className="mx-auto"
                         disabled={isSubmitting}
-                        isLoading={isSubmitting}
+                        loading={isSubmitting}
                     >
                         {isSubmitting && <span className="spinner-border spinner-border-sm mr-1"></span>}
                         送信
