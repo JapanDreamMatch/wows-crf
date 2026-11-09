@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Box,
     Button,
@@ -42,6 +42,40 @@ interface UpdateFormValues {
 
 export default function TeamUpdatePage() {
     const router = useRouter();
+
+    // 表示期間チェック状態
+    const [status, setStatus] = useState<"loading" | "yes" | "no">("loading");
+    const [loadingDots, setLoadingDots] = useState<string>(".");
+
+    useEffect(() => {
+        if (status !== "loading") return;
+        let count = 1;
+        const interval = setInterval(() => {
+            setLoadingDots(".".repeat((count % 3) + 1));
+            count++;
+        }, 300);
+        return () => clearInterval(interval);
+    }, [status]);
+
+    useEffect(() => {
+        let isMounted = true;
+        (async () => {
+            try {
+                const res = await axios.post("/api/isApplication", {});
+                if (!isMounted) return;
+                if (res.data?.canUpdate === "YES" || res.data?.canRegister === "YES") {
+                    setStatus("yes");
+                } else {
+                    setStatus("no");
+                }
+            } catch {
+                if (isMounted) setStatus("no");
+            }
+        })();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Phase 1: 認証状態
     const [authNickName, setAuthNickName] = useState<string>("");
@@ -175,6 +209,49 @@ export default function TeamUpdatePage() {
     const handleInvalid = () => {
         isSubmittingClickRef.current = false;
     };
+
+    if (status === "loading") {
+        return (
+            <div className="text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
+                <Box m={4} className="max-w-full">
+                    <Box className="max-w-3xl p-2 mx-auto my-4 text-center flex flex-col items-center">
+                        <span className="inline-flex items-center justify-center">
+                            <span>読み込み中</span>
+                            <span
+                                style={{
+                                    display: "inline-block",
+                                    width: "2.2em", // ドット3つ分の幅を確保
+                                    textAlign: "left",
+                                    marginLeft: "0.2em",
+                                    letterSpacing: "0.1em",
+                                }}
+                                aria-live="polite"
+                            >
+                                {loadingDots}
+                            </span>
+                        </span>
+                    </Box>
+                </Box>
+            </div>
+        );
+    }
+
+    if (status === "no") {
+        return (
+            <div className="text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
+                <Box m={4} className="max-w-full">
+                    <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
+                        <Heading size="lg" className="mb-4">
+                            現在は募集期間ではありません
+                        </Heading>
+                        <Link href="/" className="">
+                            <Button colorPalette="teal">トップに戻る</Button>
+                        </Link>
+                    </Box>
+                </Box>
+            </div>
+        );
+    }
 
     return (
         <div className="text-slate-900 dark:text-slate-100 bg-slate-200 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
