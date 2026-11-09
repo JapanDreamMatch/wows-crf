@@ -9,6 +9,9 @@ JDMの大会出場者登録用フォーム＋α作ろうと思ってやったや
 JDM用に出場艦艇チェッカーとか入れてますが、その辺除けばほかの大会でも利用いただいて構いません。  
 本プログラムはMIT Lisenceの元で自由に利用できます。  
 
+# JDM大会開催時の運用マニュアル
+毎年の開催準備手順（スプレッドシートやGoogle Drive、環境変数の更新手順）については、[JDM開催時 Webフォーム準備・更新手順書](docs/annual-setup-guide.md) を参照してください。
+
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
