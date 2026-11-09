@@ -11,7 +11,7 @@
    - [1-1. 応募登録用スプレッドシート（REGISTER_SHEET_ID）](#1-1-応募登録用スプレッドシートregister_sheet_id)
    - [1-2. API設定用スプレッドシート（API_SETTINGS_SHEET_ID）](#1-2-api設定用スプレッドシートapi_settings_sheet_id)
    - [1-3. 艦艇チェッカー・ルール用スプレッドシート（SHIP_AND_RULES_SHEET_ID）](#1-3-艦艇チェッカールール用スプレッドシートship_and_rules_sheet_id)
-   - [1-4. チームロゴ保存用Google Driveフォルダ（DRIVE_FOLDER_ID）](#1-4-チームロゴ保存用google-driveフォルダdrive_folder_id)
+   - [1-4. チームロゴ保存用Cloud Storageバケット（GCS_BUCKET_NAME）](#1-4-チームロゴ保存用cloud-storageバケットgcs_bucket_name)
    - [1-5. 運営Discord案内用Googleドキュメント](#1-5-運営discord案内用googleドキュメント)
 3. [サービスアカウントへの権限付与](#2-サービスアカウントへの権限付与)
 4. [環境変数の更新（Cloud Run / ローカル）](#3-環境変数の更新)
@@ -59,7 +59,7 @@ flowchart TD
 
 1. **新規スプレッドシートを作成**（または前年のものを複製・更新）
    - 名前例: `JDM_API設定_202X`
-2. **以下の2つのシート（タブ）を作成**:
+2. **以下の3つのシート（タブ）を作成**:
 
 #### ① `registerPeriod` シート
 | startDate | endDate | Ignore(debug) |
@@ -78,6 +78,13 @@ flowchart TD
 | 16 |
 
 - **teamAmount**: 募集上限チーム数（半角数字）
+
+#### ③ `logo_directory` シート
+| FolderName |
+|---|
+| JDM9 |
+
+- **FolderName**: チームロゴ画像を格納する Cloud Storage 内のフォルダ名（例: `JDM9`）。未指定時は `logos` フォルダに格納されます。画像ファイル名は `チーム略名.png`（または `.jpg`）となります。
 
 3. **URLからスプレッドシートIDをコピー**
 
@@ -101,13 +108,18 @@ flowchart TD
 
 ---
 
-### 1-4. チームロゴ保存用Google Driveフォルダ（`DRIVE_FOLDER_ID`）
-チーム応募時にアップロードされたロゴ画像を格納するフォルダです。
+### 1-4. チームロゴ保存用Cloud Storageバケット（`GCS_BUCKET_NAME`）
+チーム応募時にアップロードされたロゴ画像を格納・公開ダウンロードするためのストレージバケットです。
 
-1. Google Drive上に新規フォルダを作成
-   - 名前例: `JDM_202X_チームロゴ`
-2. **URLからフォルダIDをコピー**
-   - URL形式: `https://drive.google.com/drive/folders/【ここがID】`
+1. **GCPコンソールで Cloud Storage バケットを新規作成**
+   - バケット名例: `jdm-team-icon`
+   - ロケーション: Cloud Run と同一リージョン（例: `us-central1`）推奨
+   - ストレージクラス: Standard
+   - アクセス制御: **「均一（Uniform）」**
+   - 公開アクセスの防止 (Public Access Prevention): **「適用しない（オフ）」**（公開アクセスのため必須）
+2. **ライフサイクルルールの設定（推奨）**:
+   - 不要になった過去大会の画像自動整理のため、「作成から365日経過後に削除」などのルールを設定
+3. **バケット名をコピー**し、環境変数 `GCS_BUCKET_NAME` に設定します。
 
 ---
 
@@ -122,17 +134,28 @@ flowchart TD
 
 ---
 
-## 2. サービスアカウントへの権限付与
+## 2. サービスアカウントおよび公開アクセス権限の付与
 
-WebフォームがGoogle各リソースにアクセスできるように、GCPのサービスアカウントに編集権限を付与します。
+WebフォームがGoogle各リソースにアクセスできるように、GCPのサービスアカウントやバケットに権限を付与します。
 
+### 2-1. サービスアカウントへの権限付与
 1. サービスアカウントのメールアドレス（`GOOGLE_SERVICE_ACCOUNT_EMAIL`）を確認
    - 例: `xxxxxx@<project-id>.iam.gserviceaccount.com`
-2. 以下のすべてに、上記メールアドレスを **「編集者」** として共有・追加する:
+2. 以下のスプレッドシートすべてに、上記メールアドレスを **「編集者」** として共有・追加する:
    - [x] 応募登録用スプレッドシート（`REGISTER_SHEET_ID`）
    - [x] API設定用スプレッドシート（`API_SETTINGS_SHEET_ID`）
    - [x] 艦艇・ルール用スプレッドシート（`SHIP_AND_RULES_SHEET_ID`）
-   - [x] チームロゴ保存用Google Driveフォルダ（`DRIVE_FOLDER_ID`）
+3. Cloud Storage バケット（`jdm-team-icon`）の「権限」タブで上記サービスアカウントにロールを付与する:
+   - [x] ロール: **`ストレージ オブジェクト管理者` (`roles/storage.objectAdmin`)**（アップロードおよび失敗時のロールバック削除用）
+
+### 2-2. チームロゴバケットの全体公開設定（誰でもDL用）
+リンクを知っている人が誰でもロゴを閲覧・ダウンロードできるように設定します。
+1. Cloud Storage バケット（`jdm-team-icon`）の「権限」タブを開く
+2. 「アクセス権を付与」をクリック
+3. **新しいプリンシパル**: `allUsers`
+4. **ロール**: **`ストレージ 以前のオブジェクト読み取り` (`roles/storage.legacyObjectReader`)**
+   > [!NOTE]
+   > `objectViewer` はバケット一覧取得（list）を許可してしまうため、直リンクでのファイル取得のみを許可する `legacyObjectReader` を使用します。
 
 ---
 
@@ -147,10 +170,11 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 | `REGISTER_SHEET_ID` | 応募登録スプレッドシートのID | **必須更新** |
 | `API_SETTINGS_SHEET_ID` | 期間・上限チーム数設定シートのID | **必須更新**（別シートにした場合） |
 | `SHIP_AND_RULES_SHEET_ID` | 艦艇チェッカールールシートのID | **必須更新**（※機能有効時） |
-| `DRIVE_FOLDER_ID` | ロゴ画像保存先DriveフォルダのID | **必須更新** |
+| `GCS_BUCKET_NAME` | ロゴ画像保存先Cloud Storageバケット名 | 原則維持（`jdm-team-icon`） |
 | `WOWS_API_APP_ID` | Wargaming Developer Room発行のAPIキー | 原則維持（有効性確認のみ） |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | GCPサービスアカウントのメールアドレス | 原則維持 |
 | `GOOGLE_PRIVATE_KEY` | サービスアカウントの秘密鍵 | 原則維持 |
+| `DRIVE_FOLDER_ID` | （旧Google DriveフォルダID） | **廃止**（設定不要） |
 
 ### 反映手順
 
@@ -193,7 +217,9 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 ### ステップ4: 出力結果の確認
 - [ ] 応募登録用スプレッドシートにチーム略名の新しいシート（タブ）が作成されているか
 - [ ] チーム情報・プレイヤー情報・勝率が正しく書き込まれているか
-- [ ] Google Driveの指定フォルダに画像（ファイル名: `チーム略名.拡張子`）が保存されているか
+- [ ] スプレッドシートの **G2セル（TeamInfoの行のLogoURL列）** に画像の公開URLが書き込まれ、**H2セルにSalt、H3セルにHash** が書き込まれているか
+- [ ] そのURLをブラウザのシークレットウィンドウ等（未ログイン状態）で開き、画像が直接表示・ダウンロードできるか
+- [ ] バケットルート（`https://storage.googleapis.com/jdm-team-icon/`）にアクセスした際、一覧表示が拒否されるか
 
 ---
 
@@ -205,7 +231,7 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
   - 応募登録用スプレッドシートから、テスト送信で作成されたシート（タブ）を削除する。
   - 残っているとチーム数カウントに含まれてしまいます（削除しない場合はシート名を `@test` 等にして除外）。
 - [ ] **テスト用画像の削除**:
-  - Google Driveフォルダ内のテスト画像を削除する。
+  - Cloud Storage バケット（`jdm-team-icon`）の `logos/` フォルダ内にあるテスト画像を削除する。
 - [ ] **`Ignore(debug)` の解除**:
   - API設定用スプレッドシートの `registerPeriod` シートにある `Ignore(debug)` を **空欄** に戻す。
 - [ ] **開始日時・終了日時の再確認**:
@@ -227,7 +253,7 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 - `maxTeamAmount` シートの数値が想定より小さくなっていないか確認してください。
 
 ### Q. 送信時にエラー（500）が発生する
-- 応募登録用スプレッドシートおよびGoogle Driveフォルダにサービスアカウントの「編集者」権限があるか確認してください。
+- 応募登録用スプレッドシートへのサービスアカウント「編集者」権限、および Cloud Storage バケットへの「ストレージ オブジェクト管理者」権限があるか確認してください。
 - Cloud Runのログ（Cloud Logging）を確認し、詳細なエラーメッセージを追跡してください。
 
 ### Q. 艦艇チェッカーで艦艇データが読み込めない
@@ -242,15 +268,18 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 ### 7-1. 応募登録シート（1チームごとに自動生成されるシート）
 応募完了時、チーム略名をタイトルとしたシートが作成され、以下のフォーマットで出力されます。
 
-| Type | IGN | ID | WinRate | Contact | Comment |
-|---|---|---|---|---|---|
-| `TeamInfo` | チーム略名 | チーム名 | チーム平均勝率(%) | 連絡先（Discord等） | ひとことコメント |
-| `player1` | 代表者IGN | アカウントID | 勝率(%) | | |
-| `player2` | 選手2 IGN | アカウントID | 勝率(%) | | |
-| ... | ... | ... | ... | | |
-| `player10` | 選手10 IGN | アカウントID | 勝率(%) | | |
+| Type | IGN | ID | WinRate | Contact | Comment | LogoURL | SaltAndHash |
+|---|---|---|---|---|---|---|---|
+| `TeamInfo` | チーム略名 | チーム名 | チーム平均勝率(%) | 連絡先（Discord等） | ひとことコメント | **チームロゴ画像URL (G2セル)** | **パスワードSalt (H2セル)** |
+| `player1` | 代表者IGN | アカウントID | 勝率(%) | | | | **パスワードHash (H3セル)** |
+| `player2` | 選手2 IGN | アカウントID | 勝率(%) | | | | **認証失敗回数 / `Lock` (H4セル)** |
+| `player3` | 選手3 IGN | アカウントID | 勝率(%) | | | | **ロック解除時刻 (H5セル)** |
+| ... | ... | ... | ... | | | | |
+| `player10` | 選手10 IGN | アカウントID | 勝率(%) | | | | |
 
 > [!NOTE]
+> - `TeamInfo` の行の `LogoURL` 列（**G2セル**）には、フォームでチームロゴが添付された場合に Cloud Storage の公開ダウンロードURLが格納されます（未添付時は空欄）。
+> - `SaltAndHash` 列（H列）には、出場者変更認証用の **Salt（H2セル）**、**Argon2id Hash（H3セル）**、**連続認証失敗回数または `Lock`（H4セル）**、**ロック解除時刻（H5セル）** が格納されます。ロックを手動解除する場合は **H4セルとH5セルの内容を削除** してください。
 > - `player1` 〜 `player10` の行は、フォームで入力されたプレイヤー数（最大10名）に応じて順に追加されます。
 > - アカウントIDおよび勝率は、Wargaming API（`WOWS_API_APP_ID`）を通じて自動取得された値が格納されます。
 

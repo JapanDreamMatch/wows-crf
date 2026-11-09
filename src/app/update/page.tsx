@@ -1,0 +1,448 @@
+"use client";
+
+import { useState } from "react";
+import {
+    Box,
+    Button,
+    FormControl,
+    FormLabel,
+    Heading,
+    HStack,
+    Input,
+    Text,
+    VStack,
+} from "@chakra-ui/react";
+import { FormProvider, useForm } from "react-hook-form";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import PlayerInput from "@/app/register/components/PlayerInput";
+import TeamLogoInput from "@/app/register/components/TeamLogoInput";
+import ContactInput from "@/app/register/components/ContactInput";
+import CommentInput from "@/app/register/components/CommentInput";
+import type { TeamData } from "@/util/TeamAuth";
+
+interface UpdateFormValues {
+    teamLogo?: FileList | File | null;
+    contact: string;
+    player1: string;
+    player2: string;
+    player3: string;
+    player4: string;
+    player5: string;
+    player6: string;
+    player7: string;
+    player8: string;
+    player9: string;
+    player10: string;
+    comment: string;
+}
+
+export default function TeamUpdatePage() {
+    const router = useRouter();
+
+    // Phase 1: 認証状態
+    const [authNickName, setAuthNickName] = useState<string>("");
+    const [authPassword, setAuthPassword] = useState<string>("");
+    const [showAuthPassword, setShowAuthPassword] = useState<boolean>(false);
+    const [isVerifying, setIsVerifying] = useState<boolean>(false);
+    const [authError, setAuthError] = useState<string>("");
+
+    // Phase 2: 読み込んだチームデータ
+    const [teamData, setTeamData] = useState<TeamData | null>(null);
+    const [verifiedPassword, setVerifiedPassword] = useState<string>("");
+    const [updateError, setUpdateError] = useState<string>("");
+
+    const methods = useForm<UpdateFormValues>({
+        mode: "onBlur",
+    });
+
+    const {
+        errors,
+        isSubmitting,
+    } = methods.formState;
+
+    // Phase 1: 認証 & チームデータ読み込み
+    const handleVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAuthError("");
+        setUpdateError("");
+
+        const trimmedNick = authNickName.trim();
+        if (!trimmedNick) {
+            setAuthError("チーム略名を入力してください");
+            return;
+        }
+        if (!authPassword) {
+            setAuthError("パスワードを入力してください");
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const res = await axios.post("/api/team/verify", {
+                teamNickName: trimmedNick,
+                password: authPassword,
+            });
+            const loaded: TeamData = res.data.teamData;
+            setTeamData(loaded);
+            setVerifiedPassword(authPassword);
+
+            methods.reset({
+                contact: loaded.contact ?? "",
+                comment: loaded.comment ?? "",
+                player1: loaded.players[0] ?? "",
+                player2: loaded.players[1] ?? "",
+                player3: loaded.players[2] ?? "",
+                player4: loaded.players[3] ?? "",
+                player5: loaded.players[4] ?? "",
+                player6: loaded.players[5] ?? "",
+                player7: loaded.players[6] ?? "",
+                player8: loaded.players[7] ?? "",
+                player9: loaded.players[8] ?? "",
+                player10: loaded.players[9] ?? "",
+            });
+        } catch (err: any) {
+            setAuthError(
+                err?.response?.data?.message || "認証に失敗しました。入力内容をご確認ください"
+            );
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    // Phase 2: 更新送信
+    const handleUpdateSubmit = async (data: UpdateFormValues) => {
+        if (!teamData) return;
+        setUpdateError("");
+
+        let logo: File | undefined;
+        if (data.teamLogo instanceof FileList && data.teamLogo.length > 0) {
+            logo = data.teamLogo[0];
+        } else if (data.teamLogo instanceof File && data.teamLogo.size > 0) {
+            logo = data.teamLogo;
+        }
+
+        const sendData = new FormData();
+        sendData.append("teamNickName", teamData.teamNickName);
+        sendData.append("password", verifiedPassword);
+        if (logo) {
+            sendData.append("teamLogo", logo);
+        }
+        sendData.append("contact", data.contact ?? "");
+        sendData.append("player1", data.player1 ?? "");
+        sendData.append("player2", data.player2 ?? "");
+        sendData.append("player3", data.player3 ?? "");
+        sendData.append("player4", data.player4 ?? "");
+        sendData.append("player5", data.player5 ?? "");
+        sendData.append("player6", data.player6 ?? "");
+        sendData.append("player7", data.player7 ?? "");
+        sendData.append("player8", data.player8 ?? "");
+        sendData.append("player9", data.player9 ?? "");
+        sendData.append("player10", data.player10 ?? "");
+        sendData.append("comment", data.comment ?? "");
+
+        try {
+            await axios.post("/api/team/update", sendData);
+            router.push("/update/success");
+        } catch (err: any) {
+            setUpdateError(
+                err?.response?.data?.message || "更新に失敗しました。しばらくしてから再度お試しください"
+            );
+        }
+    };
+
+    return (
+        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+            <Box m={4} className="max-w-full">
+                {/* Phase 1: チーム認証 */}
+                <Box borderWidth="1px" borderRadius="lg" className="max-w-3xl p-4 mx-auto my-4">
+                    <Heading
+                        size="lg"
+                        className="text-center border-b-2 border-slate-400 mt-2 mx-4 pb-2"
+                    >
+                        出場者の変更（チーム認証）
+                    </Heading>
+                    <form onSubmit={handleVerify} className="mx-auto w-4/5 py-4">
+                        <VStack spacing={4} align="stretch">
+                            <Text className="text-sm text-slate-300">
+                                応募時に登録した「チーム略名」と「出場者変更用パスワード」を入力して、現在の登録情報を読み込んでください。
+                            </Text>
+
+                            <FormControl>
+                                <FormLabel>チーム略名</FormLabel>
+                                <Input
+                                    value={authNickName}
+                                    onChange={(e) => setAuthNickName(e.target.value)}
+                                    placeholder="例: JDM"
+                                />
+                            </FormControl>
+
+                            <FormControl>
+                                <FormLabel>出場者変更用パスワード</FormLabel>
+                                <HStack>
+                                    <Input
+                                        type={showAuthPassword ? "text" : "password"}
+                                        value={authPassword}
+                                        onChange={(e) => setAuthPassword(e.target.value)}
+                                        placeholder="登録時に設定したパスワード"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        colorScheme="gray"
+                                        className="text-slate-100 hover:bg-slate-600 shrink-0"
+                                        onClick={() => setShowAuthPassword((prev) => !prev)}
+                                    >
+                                        {showAuthPassword ? "隠す" : "表示"}
+                                    </Button>
+                                </HStack>
+                            </FormControl>
+
+                            {authError && (
+                                <Text color="red.400" fontWeight="bold" fontSize="sm">
+                                    {authError}
+                                </Text>
+                            )}
+
+                            <Button
+                                colorScheme="teal"
+                                type="submit"
+                                isLoading={isVerifying}
+                                disabled={isVerifying}
+                            >
+                                チーム情報を読み込む
+                            </Button>
+                        </VStack>
+                    </form>
+                </Box>
+
+                {/* Phase 2: 編集フォーム（認証成功後に表示） */}
+                {teamData && (
+                    <FormProvider {...methods}>
+                        <form onSubmit={methods.handleSubmit(handleUpdateSubmit)}>
+                            {/* チーム概要 */}
+                            <Box
+                                borderWidth="1px"
+                                borderRadius="lg"
+                                className="max-w-3xl p-2 mx-auto my-4"
+                            >
+                                <Heading
+                                    size="lg"
+                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                >
+                                    チーム概要
+                                </Heading>
+                                <div className="mx-auto w-4/5">
+                                    {/* チーム名（変更不可） */}
+                                    <FormControl className="py-4">
+                                        <Box borderWidth="0px" borderRadius="lg" className="p-2">
+                                            <FormLabel className="pl-2 mb-1">チーム名</FormLabel>
+                                            <Text
+                                                color="red.400"
+                                                fontSize="sm"
+                                                fontWeight="bold"
+                                                className="pl-2 mb-2"
+                                            >
+                                                ※チーム名は変更ができません
+                                            </Text>
+                                            <Input value={teamData.teamName} isDisabled readOnly />
+                                        </Box>
+                                    </FormControl>
+
+                                    {/* チーム略名（変更不可） */}
+                                    <FormControl className="py-4">
+                                        <Box borderWidth="0px" borderRadius="lg" className="p-2">
+                                            <FormLabel className="pl-2 mb-1">チーム略名</FormLabel>
+                                            <Text
+                                                color="red.400"
+                                                fontSize="sm"
+                                                fontWeight="bold"
+                                                className="pl-2 mb-2"
+                                            >
+                                                ※チーム略名は変更ができません
+                                            </Text>
+                                            <Input
+                                                value={teamData.teamNickName}
+                                                isDisabled
+                                                readOnly
+                                            />
+                                        </Box>
+                                    </FormControl>
+
+                                    {/* 現在のチームロゴ & ロゴ変更 */}
+                                    {teamData.logoUrl && (
+                                        <Box className="p-2">
+                                            <FormLabel className="pl-2 mb-1 text-sm">
+                                                現在登録されているチームロゴ
+                                            </FormLabel>
+                                            <div className="pl-2 my-2">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={teamData.logoUrl}
+                                                    alt="現在のチームロゴ"
+                                                    className="max-h-32 rounded border border-slate-600 object-contain"
+                                                />
+                                            </div>
+                                        </Box>
+                                    )}
+
+                                    <TeamLogoInput
+                                        rhfName={"teamLogo"}
+                                        errorMsg={errors.teamLogo && errors.teamLogo.message}
+                                    />
+                                    <Text className="pl-4 text-xs text-slate-400 -mt-2 mb-2">
+                                        ※新しい画像を選択しない場合、現在のチームロゴがそのまま維持されます。
+                                    </Text>
+
+                                    {/* 代表者連絡先 */}
+                                    <ContactInput
+                                        rhfName={"contact"}
+                                        errorMsg={errors.contact && errors.contact.message}
+                                    />
+                                </div>
+                            </Box>
+
+                            {/* 出場者 */}
+                            <Box
+                                borderWidth="1px"
+                                borderRadius="lg"
+                                className="max-w-3xl p-2 mx-auto my-4"
+                            >
+                                <Heading
+                                    size="lg"
+                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                >
+                                    出場者
+                                </Heading>
+                                <div className="mx-auto w-4/5">
+                                    <PlayerInput
+                                        label="出場者1 (代表者)"
+                                        rhfName={"player1"}
+                                        errorMsg={errors.player1 && errors.player1.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者2"
+                                        rhfName={"player2"}
+                                        errorMsg={errors.player2 && errors.player2.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者3"
+                                        rhfName={"player3"}
+                                        errorMsg={errors.player3 && errors.player3.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者4"
+                                        rhfName={"player4"}
+                                        errorMsg={errors.player4 && errors.player4.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者5"
+                                        rhfName={"player5"}
+                                        errorMsg={errors.player5 && errors.player5.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者6"
+                                        rhfName={"player6"}
+                                        errorMsg={errors.player6 && errors.player6.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者7"
+                                        rhfName={"player7"}
+                                        errorMsg={errors.player7 && errors.player7.message}
+                                        canEmpty={false}
+                                    />
+                                    <PlayerInput
+                                        label="出場者8 (補欠)"
+                                        rhfName={"player8"}
+                                        errorMsg={errors.player8 && errors.player8.message}
+                                        canEmpty={true}
+                                    />
+                                    <PlayerInput
+                                        label="出場者9 (補欠)"
+                                        rhfName={"player9"}
+                                        errorMsg={errors.player9 && errors.player9.message}
+                                        canEmpty={true}
+                                    />
+                                    <PlayerInput
+                                        label="出場者10 (補欠)"
+                                        rhfName={"player10"}
+                                        errorMsg={errors.player10 && errors.player10.message}
+                                        canEmpty={true}
+                                    />
+                                </div>
+                            </Box>
+
+                            {/* その他ご意見ご質問 */}
+                            <Box
+                                borderWidth="1px"
+                                borderRadius="lg"
+                                className="max-w-3xl p-2 mx-auto my-4"
+                            >
+                                <Heading
+                                    size="lg"
+                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                >
+                                    その他ご意見ご質問
+                                </Heading>
+                                <div className="mx-auto w-4/5">
+                                    <CommentInput
+                                        rhfName={"comment"}
+                                        errorMsg={errors.comment && errors.comment.message}
+                                    />
+                                </div>
+                            </Box>
+
+                            {/* 更新エラー表示 & 送信ボタン */}
+                            <Box
+                                borderWidth="0px"
+                                className="max-w-3xl p-2 mx-auto mt-4 pb-8 flex flex-col items-center justify-center"
+                            >
+                                {updateError && (
+                                    <Text
+                                        color="red.400"
+                                        fontWeight="bold"
+                                        fontSize="sm"
+                                        className="mb-3 text-center"
+                                    >
+                                        {updateError}
+                                    </Text>
+                                )}
+                                <Button
+                                    colorScheme="teal"
+                                    size="lg"
+                                    type="submit"
+                                    className="mx-auto"
+                                    disabled={isSubmitting}
+                                    isLoading={isSubmitting}
+                                >
+                                    変更を保存する
+                                </Button>
+                                {isSubmitting && (
+                                    <Text className="mt-3 text-teal-300 font-bold text-center">
+                                        送信中。しばらくお待ちください
+                                    </Text>
+                                )}
+                            </Box>
+                        </form>
+                    </FormProvider>
+                )}
+
+                <Box className="max-w-3xl mx-auto text-center pb-12">
+                    <Link href="/">
+                        <Button variant="outline" className="text-slate-100 hover:bg-slate-600">
+                            トップページに戻る
+                        </Button>
+                    </Link>
+                </Box>
+            </Box>
+        </div>
+    );
+}
+

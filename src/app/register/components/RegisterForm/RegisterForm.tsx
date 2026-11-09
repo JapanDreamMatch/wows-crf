@@ -1,16 +1,16 @@
 "use client"
 
-import {Box, Button, FormLabel, Heading} from "@chakra-ui/react";
+import {Box, Button, Heading, Text} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
 import {registerType, useRegisterForm} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamNameInput from "@/app/register/components/TeamNameInput";
 import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
+import PasswordInput from "@/app/register/components/PasswordInput";
 import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import {useRouter} from "next/navigation";
-import {JdmDiscordLink} from "@/components/JdmDiscordLink";
 
 
 export default function RegisterForm(){
@@ -63,20 +63,19 @@ export default function RegisterForm(){
                             errorMsg={errors.teamNickname && errors.teamNickname.message}
                         />
 
+                        {/* 出場者変更用パスワード */}
+                        <PasswordInput
+                            rhfName={"password"}
+                            confirmRhfName={"passwordConfirm"}
+                            errorMsg={errors.password && errors.password.message}
+                            confirmErrorMsg={errors.passwordConfirm && errors.passwordConfirm.message}
+                        />
+
                         {/* チームロゴ */}
-                        <Box borderWidth='0px' borderRadius='lg' className="p-2">
-                            <div className="mt-2">
-                                <FormLabel className="pl-2">チームロゴ(任意)</FormLabel>
-                            </div>
-                            <div className="my-2 mx-4 text-sm">
-                                <p className="break-all">Googleセキュリティ仕様の変更により現在利用できません。</p>
-                                <p className="break-all">お手数をおかけしますが、チーム代表者が{<JdmDiscordLink/>}上での提出をお願いいたします。</p>
-                            </div>
-                        </Box>
-                        {/*<TeamLogoInput*/}
-                        {/*    rhfName={"teamLogo"}*/}
-                        {/*    errorMsg={errors.teamLogo && errors.teamLogo.message}*/}
-                        {/*/>*/}
+                        <TeamLogoInput
+                            rhfName={"teamLogo"}
+                            errorMsg={errors.teamLogo && errors.teamLogo.message}
+                        />
 
                         {/* 代表者連絡先 */}
                         <ContactInput
@@ -195,7 +194,7 @@ export default function RegisterForm(){
 
                 {/* 送信ボタン */}
                 <Box borderWidth='0px'
-                     className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex items-center justify-center">
+                     className="max-w-3xl p-2 mx-auto mt-4 pb-16 flex flex-col items-center justify-center">
                     <Button
                         colorScheme='teal'
                         size='lg'
@@ -207,6 +206,11 @@ export default function RegisterForm(){
                         {isSubmitting && <span className="spinner-border spinner-border-sm mr-1"></span>}
                         送信
                     </Button>
+                    {isSubmitting && (
+                        <Text className="mt-3 text-teal-300 font-bold text-center">
+                            送信中。しばらくお待ちください
+                        </Text>
+                    )}
                 </Box>
 
             </form>

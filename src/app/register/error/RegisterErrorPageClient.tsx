@@ -9,7 +9,7 @@ export default function RegisterErrorPageClient() {
     const router = useRouter();
 
     return (
-        <div className="text-slate-100 bg-gray-800 min-h-screen">
+        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
             <Box m={4} className="max-w-full">
                 <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                     <Heading size="lg" className="mb-4">エラーが発生しました</Heading>

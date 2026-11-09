@@ -1,17 +1,14 @@
 import {object, string} from "yup";
-import * as yup from "yup"
+import * as yup from "yup";
 import axios from "axios";
 import {SubmitHandler} from "react-hook-form";
 
 export const registerSchema = object({
     teamName: string(),
     teamNickname: string(),
-    teamLogo: yup
-        .mixed<File>()
-        .test("fileSize", "ファイルサイズが大きすぎます", (value) => {
-            return value && value.size <= 2 * 1024 * 1024; // 2MB制限
-        })
-    ,
+    password: string(),
+    passwordConfirm: string(),
+    teamLogo: yup.mixed<FileList | File>().nullable().notRequired(),
     contact: string(),
     player1: string(),
     player2: string(),
@@ -24,7 +21,7 @@ export const registerSchema = object({
     player9: string(),
     player10: string(),
     comment: string()
-})
+});
 export type registerType = yup.InferType<typeof registerSchema>;
 
 //送信ボタンの動作
@@ -40,6 +37,7 @@ export const onSubmit: SubmitHandler<registerType> = async (formData) => {
     const sendData = new FormData();
     sendData.append("teamName", formData.teamName ?? "");
     sendData.append("teamNickname", formData.teamNickname ?? "");
+    sendData.append("password", formData.password ?? "");
     sendData.append("teamLogo", logo ?? new Blob());
     sendData.append("contact", formData.contact ?? "");
     sendData.append("player1", formData.player1 ?? "");
@@ -54,18 +52,16 @@ export const onSubmit: SubmitHandler<registerType> = async (formData) => {
     sendData.append("player10", formData.player10 ?? "");
     sendData.append("comment", formData.comment ?? "");
     try {
-        const res = await axios.post(`/api/register`, sendData,{
-            headers: { "Content-Type": "multipart/form-data" },
-        });
+        const res = await axios.post(`/api/register`, sendData);
         return res.data.message as string;
     } catch (error: any) {
         // エラーメッセージをthrow
         throw new Error(error?.response?.data?.message || "登録に失敗しました");
     }
-}
+};
 
 export const useRegisterForm = () => {
     return {
         onSubmit
-    }
-}
+    };
+};
