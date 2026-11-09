@@ -1,6 +1,10 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
-import {Box, FormControl, FormErrorMessage, FormLabel, Input} from "@chakra-ui/react";
+import {Box, FormControl, FormErrorMessage, FormHelperText, FormLabel, Input} from "@chakra-ui/react";
 import {useRef} from "react";
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const SUPPORTED_FORMATS = ["image/jpeg", "image/png"];
+
 export default function TeamLogoInput<T extends FieldValues = never>(
     {
         rhfName,
@@ -15,7 +19,20 @@ export default function TeamLogoInput<T extends FieldValues = never>(
         register
     } = useFormContext();
 
-    const { ref, onChange: rhfOnChange, ...rest } = register(rhfName);
+    const { ref, onChange: rhfOnChange, ...rest } = register(rhfName, {
+        validate: {
+            fileCount: (v: FileList | File | null | undefined) =>
+                !(v instanceof FileList) || v.length <= 1 || "チームロゴは1枚のみ添付できます",
+            fileSize: (v: FileList | File | null | undefined) => {
+                const f = v instanceof FileList ? v[0] : v;
+                return !f || f.size === 0 || f.size <= MAX_FILE_SIZE || "ファイルサイズは20MB以内である必要があります";
+            },
+            fileType: (v: FileList | File | null | undefined) => {
+                const f = v instanceof FileList ? v[0] : v;
+                return !f || f.size === 0 || SUPPORTED_FORMATS.includes(f.type) || "対応フォーマットはjpeg, jpg, pngのみです";
+            },
+        },
+    });
 
     const fileInput = useRef<HTMLInputElement | null>(null);
 
@@ -32,10 +49,14 @@ export default function TeamLogoInput<T extends FieldValues = never>(
                             ref(e);
                             fileInput.current = e;
                         }}
-                        accept="image/*"
+                        onChange={rhfOnChange}
+                        accept="image/png, image/jpeg, .png, .jpg, .jpeg"
                         className="pt-1"
                         {...rest}
                     />
+                    <FormHelperText className="pl-2 text-xs text-gray-500">
+                        ※jpeg, jpg, png形式、20MB以内、1枚のみ
+                    </FormHelperText>
                     <FormErrorMessage>{errorMsg}</FormErrorMessage>
                 </div>
             </Box>

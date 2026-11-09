@@ -27,7 +27,7 @@ Google Driveへの依存を廃止し、専用の Google Cloud Storage (GCS) バ�
 | **ストレージ種別** | Google Cloud Storage (GCS) |
 | **バケット名** | `jdm-team-icon`（環境変数 `GCS_BUCKET_NAME` で指定可能とする） |
 | **アクセス権限** | **読み取り専用（公開）**：リンクを知っていれば誰でもダウンロード・閲覧可能。ただしバケット内の一覧取得は不可 |
-| **オブジェクト名** | `logos/{timestamp}-{UUID}.{png\|jpg}`（推測困難・ASCIIのみ） |
+| **オブジェクト名** | `{FolderName}/{チーム略名}.{png\|jpg}`（`FolderName`はスプレッドシートの`logo_directory`より取得、デフォルト: `logos`） |
 | **URL形式** | `https://storage.googleapis.com/{bucketName}/{objectName}` |
 
 ### 2.3 スプレッドシート連携仕様

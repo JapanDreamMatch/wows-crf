@@ -10,7 +10,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 本プログラムはMIT Lisenceの元で自由に利用できます。  
 
 # JDM大会開催時の運用マニュアル
-毎年の開催準備手順（スプレッドシートやGoogle Drive、環境変数の更新手順）については、[JDM開催時 Webフォーム準備・更新手順書](docs/annual-setup-guide.md) を参照してください。
+毎年の開催準備手順（スプレッドシートやCloud Storage、環境変数の更新手順）については、[JDM開催時 Webフォーム準備・更新手順書](docs/annual-setup-guide.md) を参照してください。
 
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
@@ -18,6 +18,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 - [react-hook-form](https://www.react-hook-form.com/api/)
 - yup
 - axios
+- @google-cloud/storage
 - google-auth-library
 - google-spreadsheet
 - googleapis
@@ -26,13 +27,27 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 次の内容を記載してます。各自とってきてください。  
 ```.ini
 API_SETTINGS_SHEET_ID=''
-DRIVE_FOLDER_ID='DriveFolderID'
+GCS_BUCKET_NAME='jdm-team-icon'
 GOOGLE_APPLICATION_CREDENTIALS='FILEPATH/credentials.json'
 GOOGLE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\nlonglongkey\n-----END PRIVATE KEY-----\n'
 GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
 REGISTER_SHEET_ID='sheetid'
 WOWS_API_APP_ID="appid"
 ```
+※ 従来の `DRIVE_FOLDER_ID`（Google Drive）は廃止され、Cloud Storage（`GCS_BUCKET_NAME`）に移行しました。
+
+# Google Cloud Storage (チームロゴ保存先) の設定
+1. GCP コンソールで Cloud Storage バケット（例: `jdm-team-icon`）を作成
+   - ロケーション: Cloud Run と同一リージョン（例: `us-central1`）推奨
+   - アクセス制御: 「均一（Uniform）」を推奨
+   - 公開アクセスの防止 (Public Access Prevention): 「適用しない（オフ）」に設定
+2. バケットの「権限」タブで以下のIAM権限を設定:
+   - **サービスアカウント (`GOOGLE_SERVICE_ACCOUNT_EMAIL`)**:
+     - ロール: `ストレージ オブジェクト管理者` (`roles/storage.objectAdmin`) を付与（アップロードおよび失敗時のロールバック削除用）
+   - **一般ユーザー向け読み取り専用（リンクを知っていれば誰でもDL可能）**:
+     - プリンシパル: `allUsers`
+     - ロール: `ストレージ 以前のオブジェクト読み取り` (`roles/storage.legacyObjectReader`) を付与（バケット一覧の閲覧 `list` は不許可とし、ファイル直URLのみ閲覧・DLを許可）
+3. バケット名を `.env.local` の `GCS_BUCKET_NAME`（および Cloud Run の環境変数）に設定
 
 # Google SpreadSheetの設定
 ## 応募登録の記録シート(名前任意)
@@ -47,7 +62,7 @@ WOWS_API_APP_ID="appid"
 ## API設定シート(名前任意)
 1. Google SpreadSheetを作成
 2. 作成したSpreadSheetを`GOOGLE_SERVICE_ACCOUNT_EMAIL`のアドレスに共有設定する
-3. シート`registerPeriod`、`maxTeamAmount`の2つを作成する
+3. シート`registerPeriod`、`maxTeamAmount`、`logo_directory`の3つを作成する
 
 ### registerPeriodシートの設定
 | startDate | endDate | Ignore(debug) |
@@ -58,6 +73,12 @@ WOWS_API_APP_ID="appid"
 | teamAmount |
 |------------|
 | 12         |
+
+### logo_directoryシートの設定
+| FolderName |
+|------------|
+| JDM9       |
+※Cloud Storageバケット内で画像を格納するフォルダ名です。画像ファイルは `{FolderName}/{チーム略名}.png`（または `.jpg`）として保存されます。
 
 # Google Documentの設定(Discord Link)
 1. Google Documentを作成

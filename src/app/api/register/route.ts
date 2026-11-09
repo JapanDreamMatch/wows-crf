@@ -2,19 +2,56 @@ import {NextRequest, NextResponse} from "next/server";
 import {Player} from "@/util/Player";
 import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
 import {REGISTER_HEADER} from "@/util/SheetHeader";
-import {Readable} from "node:stream";
 import {CheckTime} from "@/app/api/isApplication/checkTime";
 import {CheckTeamAmount} from "@/app/api/isApplication/checkTeamAmount";
 import {IsIgnore} from "@/app/api/isApplication/isIgnore";
+import {CloudStorageService} from "@/util/StorageService";
+import {detectImageType, MAX_LOGO_SIZE, DetectedImage} from "@/util/ImageValidator";
 
 export async function POST(req: NextRequest) {
 
     try {
         const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
-        const DRIVE_FOLDER_ID = process.env.DRIVE_FOLDER_ID ?? "";
+
+        // (1) 早期サイズチェック（formData() の前）
+        const contentLength = Number(req.headers.get("content-length") ?? 0);
+        if (contentLength > MAX_LOGO_SIZE + 1024 * 1024) {
+            return NextResponse.json(
+                { message: "画像サイズは20MB以内である必要があります" },
+                { status: 413 }
+            );
+        }
 
         const formData = await req.formData();
 
+        // (2) 画像検証（Player API 呼び出しの前）
+        const logos = formData
+            .getAll("teamLogo")
+            .filter((v): v is File => typeof v === "object" && v.size > 0);
+        if (logos.length > 1) {
+            return NextResponse.json(
+                { message: "チームロゴは1枚のみ添付できます" },
+                { status: 400 }
+            );
+        }
+        let logoBuffer: Buffer | null = null;
+        let logoType: DetectedImage | null = null;
+        if (logos.length === 1) {
+            if (logos[0].size > MAX_LOGO_SIZE) {
+                return NextResponse.json(
+                    { message: "画像サイズは20MB以内である必要があります" },
+                    { status: 400 }
+                );
+            }
+            logoBuffer = Buffer.from(await logos[0].arrayBuffer());
+            logoType = detectImageType(logoBuffer);
+            if (!logoType) {
+                return NextResponse.json(
+                    { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
+                    { status: 400 }
+                );
+            }
+        }
 
         //提出期限すぎていないかのチェック
         const checkTime = await CheckTime();
@@ -31,7 +68,6 @@ export async function POST(req: NextRequest) {
         const teamName = formData.get("teamName") as string;
         const teamNickName = formData.get("teamNickname") as string;
         const contact = formData.get("contact") as string;
-        const teamLogo = formData.get("teamLogo") as File;
         const ign1 = formData.get("player1") as string;
         const ign2 = formData.get("player2") as string;
         const ign3 = formData.get("player3") as string;
@@ -66,27 +102,6 @@ export async function POST(req: NextRequest) {
                 return prev+current;
             }) / teamMemberWinRate.length;
 
-        const sheetRows: (string[] | Record<string, string | number | boolean>)[] = [
-            {
-                Type: "TeamInfo",
-                IGN: teamNickName,
-                ID: teamName,
-                WinRate: teamWinRate,
-                Contact: contact,
-                Comment: comment
-            }
-        ];
-        for(let i = 0; i<players.length; i++){
-            sheetRows.push(
-                {
-                    Type: `player${i+1}`,
-                    IGN: players[i].getIgn(),
-                    ID: players[i].getUid() ?? "undefined",
-                    WinRate: players[i].getWinRate() ?? "undefined",
-                }
-            );
-        }
-
         // サーバーサイドでチーム略名のバリデーション（@を含む場合はエラー）
         if (teamNickName.includes("@")) {
             return NextResponse.json(
@@ -120,46 +135,60 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        //spreadsheetへの情報書き込み
-        await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
-        await spreadSheet.addRows(teamNickName,sheetRows);
+        // ロゴ保存先ディレクトリの取得 (logo_directory シート)
+        let logoDirectory = "logos";
+        try {
+            const logoDirSheet = await settingsBook.getSheet("logo_directory");
+            if (logoDirSheet) {
+                await logoDirSheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 1});
+                const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
+                if (dirVal) {
+                    logoDirectory = dirVal;
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to load logo_directory setting, fallback to 'logos':", e);
+        }
 
+        // (3) アップロード → シート書き込み（失敗時はロールバック）
+        const storage = new CloudStorageService();
+        let uploaded: { objectName: string; url: string } | null = null;
+        try {
+            if (logoBuffer && logoType) {
+                uploaded = await storage.uploadTeamLogo(logoBuffer, logoType, teamNickName, logoDirectory);
+            }
 
-        //画像に(チームロゴ)関する処理
-        if (teamLogo && typeof teamLogo === "object" && teamLogo.size > 0) {
-            // const fs = require('fs');
-            const {GoogleAuth} = require('google-auth-library');
-            const {google} = require('googleapis');
+            const sheetRows: (string[] | Record<string, string | number | boolean>)[] = [
+                {
+                    Type: "TeamInfo",
+                    IGN: teamNickName,
+                    ID: teamName,
+                    WinRate: teamWinRate,
+                    Contact: contact,
+                    Comment: comment
+                }
+            ];
+            for(let i = 0; i < players.length; i++){
+                sheetRows.push(
+                    {
+                        Type: `player${i+1}`,
+                        IGN: players[i].getIgn(),
+                        ID: players[i].getUid() ?? "undefined",
+                        WinRate: players[i].getWinRate() ?? "undefined",
+                        Comment: i === 0 ? (uploaded?.url ?? "") : "", // F3セル (player1行のComment列)
+                    }
+                );
+            }
 
-            // ファイルを ArrayBuffer として取得し、Buffer に変換
-            const arrayBuffer = await teamLogo.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
+            //spreadsheetへの情報書き込み
+            await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
+            await spreadSheet.addRows(teamNickName, sheetRows);
 
-            // Buffer から Node.js のストリームを作成
-            const nodeStream = Readable.from(buffer);
-
-            //ファイル名を作成
-            const lastDotIndex = teamLogo.name.lastIndexOf(".");
-            const fileName = teamNickName + (lastDotIndex !== -1 ? teamLogo.name.slice(lastDotIndex) : "");
-
-            // Get credentials and build service
-            const auth = new GoogleAuth({
-                scopes: 'https://www.googleapis.com/auth/drive',
-            });
-            const drive = google.drive({version: 'v3', auth});
-            const fileMetadata = {
-                name: fileName,
-                parents: [DRIVE_FOLDER_ID],
-            };
-            // ファイルのアップロード
-            await drive.files.create({
-                requestBody: fileMetadata,
-                media: {
-                    mimeType: teamLogo.type,
-                    body: nodeStream,
-                },
-                fields: "id",
-            });
+        } catch (e) {
+            if (uploaded) {
+                await storage.deleteObject(uploaded.objectName);
+            }
+            throw e;
         }
 
         return NextResponse.json({ message: "ok" });

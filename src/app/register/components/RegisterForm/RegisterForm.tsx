@@ -1,6 +1,6 @@
 "use client"
 
-import {Box, Button, FormLabel, Heading} from "@chakra-ui/react";
+import {Box, Button, Heading} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
 import {registerType, useRegisterForm} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
@@ -10,7 +10,6 @@ import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import {useRouter} from "next/navigation";
-import {JdmDiscordLink} from "@/components/JdmDiscordLink";
 
 
 export default function RegisterForm(){
@@ -64,19 +63,10 @@ export default function RegisterForm(){
                         />
 
                         {/* チームロゴ */}
-                        <Box borderWidth='0px' borderRadius='lg' className="p-2">
-                            <div className="mt-2">
-                                <FormLabel className="pl-2">チームロゴ(任意)</FormLabel>
-                            </div>
-                            <div className="my-2 mx-4 text-sm">
-                                <p className="break-all">Googleセキュリティ仕様の変更により現在利用できません。</p>
-                                <p className="break-all">お手数をおかけしますが、チーム代表者が{<JdmDiscordLink/>}上での提出をお願いいたします。</p>
-                            </div>
-                        </Box>
-                        {/*<TeamLogoInput*/}
-                        {/*    rhfName={"teamLogo"}*/}
-                        {/*    errorMsg={errors.teamLogo && errors.teamLogo.message}*/}
-                        {/*/>*/}
+                        <TeamLogoInput
+                            rhfName={"teamLogo"}
+                            errorMsg={errors.teamLogo && errors.teamLogo.message}
+                        />
 
                         {/* 代表者連絡先 */}
                         <ContactInput
