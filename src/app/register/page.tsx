@@ -45,7 +45,7 @@ export default function ContestantRegister() {
 
     if (status === "loading") {
         return (
-            <div className="text-slate-100 bg-gray-800">
+            <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center flex flex-col items-center">
                         <span className="inline-flex items-center justify-center">
@@ -77,7 +77,7 @@ export default function ContestantRegister() {
             message = "現在は募集期間ではありません";
         }
         return (
-            <div className="text-slate-100 bg-gray-800 min-h-screen">
+            <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                         <Heading size="lg" className="mb-4">{message}</Heading>
@@ -93,7 +93,7 @@ export default function ContestantRegister() {
     }
 
     return (
-        <div className="text-slate-100 bg-gray-800">
+        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
             <Box m={4} className="max-w-full">
 
                 {/* フォーム注意事項 */}
