@@ -74,6 +74,29 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/shipchecker",
+    title: "艦艇チェック",
+    description: "大会ルールに基づく艦艇編成のチェック・シミュレーションを行います。",
+    badge: "編成確認",
+    external: false,
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="w-6 h-6"
+        aria-hidden="true"
+      >
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Home() {
@@ -92,7 +115,7 @@ export default function Home() {
           </Text>
         </VStack>
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} className="w-full">
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} className="w-full">
           {navItems.map((item) => (
             <Link
               key={item.href}
