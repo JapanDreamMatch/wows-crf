@@ -1,5 +1,5 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
-import {Box, FormControl, FormErrorMessage, FormHelperText, FormLabel, Input} from "@chakra-ui/react";
+import {Box, Field, Input} from "@chakra-ui/react";
 import {useRef} from "react";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -37,10 +37,10 @@ export default function TeamLogoInput<T extends FieldValues = never>(
     const fileInput = useRef<HTMLInputElement | null>(null);
 
     return(
-        <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
-            <Box borderWidth='0px' borderRadius='lg' className="p-2">
+        <Field.Root invalid={Boolean(errorMsg)} className="py-4">
+            <Box borderWidth='0px' borderRadius='lg' className="p-2 w-full">
                 <div className="mt-2">
-                    <FormLabel className="pl-2">チームロゴ(任意)</FormLabel>
+                    <Field.Label className="pl-2">チームロゴ(任意)</Field.Label>
                 </div>
                 <div>
                     <Input
@@ -54,12 +54,12 @@ export default function TeamLogoInput<T extends FieldValues = never>(
                         className="pt-1"
                         {...rest}
                     />
-                    <FormHelperText className="pl-2 text-xs text-slate-500 dark:text-slate-400">
+                    <Field.HelperText className="pl-2 text-xs text-slate-500 dark:text-slate-400">
                         ※jpeg, jpg, png形式、20MB以内、1枚のみ
-                    </FormHelperText>
-                    <FormErrorMessage>{errorMsg}</FormErrorMessage>
+                    </Field.HelperText>
+                    <Field.ErrorText>{errorMsg}</Field.ErrorText>
                 </div>
             </Box>
-        </FormControl>
+        </Field.Root>
     );
 }

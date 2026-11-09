@@ -4,9 +4,7 @@ import { useState } from "react";
 import {
     Box,
     Button,
-    FormControl,
-    FormHelperText,
-    FormLabel,
+    Field,
     Heading,
     HStack,
     Input,
@@ -81,10 +79,10 @@ export default function GenerateHashClient() {
                         パスワードソルト（H2セル）とパスワードを入力すると、Argon2idハッシュ（H3セル）をブラウザ内で計算します。入力内容は外部へ送信されません。
                     </Text>
 
-                    <VStack spacing={5} align="stretch">
-                        <FormControl>
-                            <FormLabel>パスワードソルト (Hex)</FormLabel>
-                            <HStack>
+                    <VStack gap={5} align="stretch">
+                        <Field.Root>
+                            <Field.Label>パスワードソルト (Hex)</Field.Label>
+                            <HStack className="w-full">
                                 <Input
                                     value={salt}
                                     onChange={(e) => setSalt(e.target.value)}
@@ -92,7 +90,7 @@ export default function GenerateHashClient() {
                                     fontFamily="monospace"
                                 />
                                 <Button
-                                    colorScheme="gray"
+                                    colorPalette="gray"
                                     variant="outline"
                                     className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                     onClick={handleGenerateRandomSalt}
@@ -101,14 +99,14 @@ export default function GenerateHashClient() {
                                     ランダム生成
                                 </Button>
                             </HStack>
-                            <FormHelperText className="text-xs text-slate-500 dark:text-slate-400">
+                            <Field.HelperText className="text-xs text-slate-500 dark:text-slate-400">
                                 ※SpreadsheetのH2セルに記載されている32文字の16進文字列（16バイトへデコードして計算されます）
-                            </FormHelperText>
-                        </FormControl>
+                            </Field.HelperText>
+                        </Field.Root>
 
-                        <FormControl>
-                            <FormLabel>パスワード</FormLabel>
-                            <HStack>
+                        <Field.Root>
+                            <Field.Label>パスワード</Field.Label>
+                            <HStack className="w-full">
                                 <Input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
@@ -116,7 +114,7 @@ export default function GenerateHashClient() {
                                     placeholder="パスワードを入力"
                                 />
                                 <Button
-                                    colorScheme="gray"
+                                    colorPalette="gray"
                                     variant="outline"
                                     className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                     onClick={() => setShowPassword((prev) => !prev)}
@@ -125,7 +123,7 @@ export default function GenerateHashClient() {
                                     {showPassword ? "隠す" : "表示"}
                                 </Button>
                             </HStack>
-                        </FormControl>
+                        </Field.Root>
 
                         {error && (
                             <Text color="red.400" fontWeight="bold" fontSize="sm">
@@ -134,9 +132,9 @@ export default function GenerateHashClient() {
                         )}
 
                         <Button
-                            colorScheme="teal"
+                            colorPalette="teal"
                             onClick={handleCalculateHash}
-                            isLoading={isGenerating}
+                            loading={isGenerating}
                             disabled={isGenerating}
                             type="button"
                         >
@@ -144,23 +142,23 @@ export default function GenerateHashClient() {
                         </Button>
 
                         {hash && (
-                            <Box
+                            <Field.Root
                                 borderWidth="1px"
                                 borderRadius="md"
                                 className="p-4 bg-slate-100 dark:bg-gray-900 border-slate-200 dark:border-slate-700 mt-4"
                             >
-                                <FormLabel className="text-sm text-teal-700 dark:text-teal-300">
+                                <Field.Label className="text-sm text-teal-700 dark:text-teal-300">
                                     生成されたパスワードハッシュ (H3セル)
-                                </FormLabel>
-                                <HStack>
+                                </Field.Label>
+                                <HStack className="w-full">
                                     <Input
                                         value={hash}
-                                        isReadOnly
+                                        readOnly
                                         fontFamily="monospace"
                                         className="bg-white dark:bg-gray-800"
                                     />
                                     <Button
-                                        colorScheme="teal"
+                                        colorPalette="teal"
                                         variant="outline"
                                         onClick={handleCopyHash}
                                         className="shrink-0"
@@ -169,7 +167,7 @@ export default function GenerateHashClient() {
                                         {copied ? "コピー完了" : "コピー"}
                                     </Button>
                                 </HStack>
-                            </Box>
+                            </Field.Root>
                         )}
 
                         <Box className="text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-600">

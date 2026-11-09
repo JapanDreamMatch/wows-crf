@@ -15,14 +15,14 @@ export default function Home() {
                     <Text className="mb-4">
                         チーム変更はこちらからお願いします
                     </Text>
-                    <VStack spacing={4}>
+                    <VStack gap={4}>
                         <Link href="/update">
-                            <Button colorScheme="blue">
+                            <Button colorPalette="blue">
                                 出場者の変更
                             </Button>
                         </Link>
                         <Link href="/">
-                            <Button colorScheme="teal">
+                            <Button colorPalette="teal">
                                 トップページに戻る
                             </Button>
                         </Link>

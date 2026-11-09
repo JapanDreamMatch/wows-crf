@@ -2,10 +2,7 @@ import { FieldValues, Path, useFormContext } from "react-hook-form";
 import {
     Box,
     Button,
-    FormControl,
-    FormErrorMessage,
-    FormHelperText,
-    FormLabel,
+    Field,
     HStack,
     Input,
 } from "@chakra-ui/react";
@@ -28,14 +25,14 @@ export default function PasswordInput<T extends FieldValues = never>({
 
     return (
         <Box borderWidth="0px" borderRadius="lg" className="p-2 py-4">
-            <FormControl isInvalid={Boolean(errorMsg)} className="mb-4">
+            <Field.Root invalid={Boolean(errorMsg)} className="mb-4">
                 <div className="mt-2">
-                    <FormLabel className="pl-2 mb-1">出場者変更用パスワード</FormLabel>
-                    <FormHelperText className="pl-2 mb-2 text-xs text-slate-600 dark:text-slate-300">
+                    <Field.Label className="pl-2 mb-1">出場者変更用パスワード</Field.Label>
+                    <Field.HelperText className="pl-2 mb-2 text-xs text-slate-600 dark:text-slate-300">
                         ※出場メンバー等の変更時に必要となります。忘れないよう必ず控えてください。（{MIN_PASSWORD_LENGTH}文字以上）
-                    </FormHelperText>
+                    </Field.HelperText>
                 </div>
-                <HStack>
+                <HStack className="w-full">
                     <Input
                         id={rhfName}
                         type={showPassword ? "text" : "password"}
@@ -51,20 +48,20 @@ export default function PasswordInput<T extends FieldValues = never>({
                     <Button
                         type="button"
                         variant="outline"
-                        colorScheme="gray"
+                        colorPalette="gray"
                         className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                         onClick={() => setShowPassword((prev) => !prev)}
                     >
                         {showPassword ? "隠す" : "表示"}
                     </Button>
                 </HStack>
-                <FormErrorMessage>{errorMsg}</FormErrorMessage>
-            </FormControl>
+                <Field.ErrorText>{errorMsg}</Field.ErrorText>
+            </Field.Root>
 
-            <FormControl isInvalid={Boolean(confirmErrorMsg)}>
-                <FormLabel className="pl-2 mb-1 text-sm">
+            <Field.Root invalid={Boolean(confirmErrorMsg)}>
+                <Field.Label className="pl-2 mb-1 text-sm">
                     出場者変更用パスワード（確認用）
-                </FormLabel>
+                </Field.Label>
                 <Input
                     id={confirmRhfName}
                     type={showPassword ? "text" : "password"}
@@ -78,8 +75,8 @@ export default function PasswordInput<T extends FieldValues = never>({
                         },
                     })}
                 />
-                <FormErrorMessage>{confirmErrorMsg}</FormErrorMessage>
-            </FormControl>
+                <Field.ErrorText>{confirmErrorMsg}</Field.ErrorText>
+            </Field.Root>
         </Box>
     );
 }

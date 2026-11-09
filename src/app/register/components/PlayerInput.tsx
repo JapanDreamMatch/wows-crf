@@ -1,5 +1,5 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
-import {Box, FormControl, FormErrorMessage, FormLabel, HStack, Input} from "@chakra-ui/react";
+import {Box, Field, HStack, Input} from "@chakra-ui/react";
 import axios from "axios";
 import {useState} from "react";
 import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/util/type/PlayerChecker";
@@ -27,10 +27,10 @@ export default function PlayerInput<T extends FieldValues = never>(
     const [lastValidatedUsername, setLastValidatedUsername] = useState<string | undefined>(undefined);
 
     return (
-        <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
-            <Box borderWidth='0px' borderRadius='lg' className="p-2">
+        <Field.Root invalid={Boolean(errorMsg)} className="py-4">
+            <Box borderWidth='0px' borderRadius='lg' className="p-2 w-full">
                 <div className="mt-2">
-                    <FormLabel className="pl-2">{label}</FormLabel>
+                    <Field.Label className="pl-2">{label}</Field.Label>
                 </div>
                 <div>
                     <Input
@@ -110,7 +110,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                             }
                         })}
                     />
-                    <FormErrorMessage>{errorMsg}</FormErrorMessage>
+                    <Field.ErrorText>{errorMsg}</Field.ErrorText>
                     <HStack
                         hidden={accountId === undefined}
                         justify="right"
@@ -127,6 +127,6 @@ export default function PlayerInput<T extends FieldValues = never>(
 
                 </div>
             </Box>
-        </FormControl>
+        </Field.Root>
     );
 }

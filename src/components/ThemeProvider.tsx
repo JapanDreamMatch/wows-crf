@@ -1,6 +1,6 @@
 "use client";
 
-import { ChakraProvider, extendTheme, useColorMode } from "@chakra-ui/react";
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type ThemeMode = "dark" | "light";
@@ -21,21 +21,6 @@ export const useTheme = () => useContext(ThemeContext);
 
 const STORAGE_KEY = "wows-crf-theme";
 
-const chakraTheme = extendTheme({
-    config: {
-        initialColorMode: "dark",
-        useSystemColorMode: false,
-    },
-    styles: {
-        global: {
-            body: {
-                bg: "transparent",
-                color: "inherit",
-            },
-        },
-    },
-});
-
 function applyDomTheme(mode: ThemeMode) {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -46,16 +31,6 @@ function applyDomTheme(mode: ThemeMode) {
     if (meta) {
         meta.setAttribute("content", mode);
     }
-}
-
-function ChakraColorModeSync({ theme }: { theme: ThemeMode }) {
-    const { colorMode, setColorMode } = useColorMode();
-    useEffect(() => {
-        if (colorMode !== theme) {
-            setColorMode(theme);
-        }
-    }, [theme, colorMode, setColorMode]);
-    return null;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -109,8 +84,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <ThemeContext.Provider value={{ theme, toggleTheme, setThemeMode }}>
-            <ChakraProvider theme={chakraTheme}>
-                <ChakraColorModeSync theme={theme} />
+            <ChakraProvider value={defaultSystem}>
                 {children}
             </ChakraProvider>
         </ThemeContext.Provider>

@@ -4,8 +4,7 @@ import { useRef, useState } from "react";
 import {
     Box,
     Button,
-    FormControl,
-    FormLabel,
+    Field,
     Heading,
     HStack,
     Input,
@@ -189,23 +188,23 @@ export default function TeamUpdatePage() {
                         出場者の変更（チーム認証）
                     </Heading>
                     <form onSubmit={handleVerify} className="mx-auto w-4/5 py-4">
-                        <VStack spacing={4} align="stretch">
+                        <VStack gap={4} align="stretch">
                             <Text className="text-sm text-slate-600 dark:text-slate-300">
                                 応募時に登録した「チーム略名」と「出場者変更用パスワード」を入力して、現在の登録情報を読み込んでください。
                             </Text>
 
-                            <FormControl>
-                                <FormLabel>チーム略名</FormLabel>
+                            <Field.Root>
+                                <Field.Label>チーム略名</Field.Label>
                                 <Input
                                     value={authNickName}
                                     onChange={(e) => setAuthNickName(e.target.value)}
                                     placeholder="例: JDM"
                                 />
-                            </FormControl>
+                            </Field.Root>
 
-                            <FormControl>
-                                <FormLabel>出場者変更用パスワード</FormLabel>
-                                <HStack>
+                            <Field.Root>
+                                <Field.Label>出場者変更用パスワード</Field.Label>
+                                <HStack className="w-full">
                                     <Input
                                         type={showAuthPassword ? "text" : "password"}
                                         value={authPassword}
@@ -215,14 +214,14 @@ export default function TeamUpdatePage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        colorScheme="gray"
+                                        colorPalette="gray"
                                         className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                         onClick={() => setShowAuthPassword((prev) => !prev)}
                                     >
                                         {showAuthPassword ? "隠す" : "表示"}
                                     </Button>
                                 </HStack>
-                            </FormControl>
+                            </Field.Root>
 
                             {authError && (
                                 <Text color="red.400" fontWeight="bold" fontSize="sm">
@@ -231,9 +230,9 @@ export default function TeamUpdatePage() {
                             )}
 
                             <Button
-                                colorScheme="teal"
+                                colorPalette="teal"
                                 type="submit"
-                                isLoading={isVerifying}
+                                loading={isVerifying}
                                 disabled={isVerifying}
                             >
                                 チーム情報を読み込む
@@ -267,9 +266,9 @@ export default function TeamUpdatePage() {
                                 </Heading>
                                 <div className="mx-auto w-4/5">
                                     {/* チーム名（変更不可） */}
-                                    <FormControl className="py-4">
-                                        <Box borderWidth="0px" borderRadius="lg" className="p-2">
-                                            <FormLabel className="pl-2 mb-1">チーム名</FormLabel>
+                                    <Field.Root className="py-4">
+                                        <Box borderWidth="0px" borderRadius="lg" className="p-2 w-full">
+                                            <Field.Label className="pl-2 mb-1">チーム名</Field.Label>
                                             <Text
                                                 color="red.400"
                                                 fontSize="sm"
@@ -278,14 +277,14 @@ export default function TeamUpdatePage() {
                                             >
                                                 ※チーム名は変更ができません
                                             </Text>
-                                            <Input value={teamData.teamName} isDisabled readOnly />
+                                            <Input value={teamData.teamName} disabled readOnly />
                                         </Box>
-                                    </FormControl>
+                                    </Field.Root>
 
                                     {/* チーム略名（変更不可） */}
-                                    <FormControl className="py-4">
-                                        <Box borderWidth="0px" borderRadius="lg" className="p-2">
-                                            <FormLabel className="pl-2 mb-1">チーム略名</FormLabel>
+                                    <Field.Root className="py-4">
+                                        <Box borderWidth="0px" borderRadius="lg" className="p-2 w-full">
+                                            <Field.Label className="pl-2 mb-1">チーム略名</Field.Label>
                                             <Text
                                                 color="red.400"
                                                 fontSize="sm"
@@ -296,18 +295,18 @@ export default function TeamUpdatePage() {
                                             </Text>
                                             <Input
                                                 value={teamData.teamNickName}
-                                                isDisabled
+                                                disabled
                                                 readOnly
                                             />
                                         </Box>
-                                    </FormControl>
+                                    </Field.Root>
 
                                     {/* 現在のチームロゴ & ロゴ変更 */}
                                     {teamData.logoUrl && (
-                                        <Box className="p-2">
-                                            <FormLabel className="pl-2 mb-1 text-sm">
+                                        <Field.Root className="p-2">
+                                            <Field.Label className="pl-2 mb-1 text-sm">
                                                 現在登録されているチームロゴ
-                                            </FormLabel>
+                                            </Field.Label>
                                             <div className="pl-2 my-2">
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img
@@ -316,7 +315,7 @@ export default function TeamUpdatePage() {
                                                     className="max-h-32 rounded border border-slate-300 dark:border-slate-600 object-contain"
                                                 />
                                             </div>
-                                        </Box>
+                                        </Field.Root>
                                     )}
 
                                     <TeamLogoInput
@@ -447,12 +446,12 @@ export default function TeamUpdatePage() {
                                     </Text>
                                 )}
                                 <Button
-                                    colorScheme="teal"
+                                    colorPalette="teal"
                                     size="lg"
                                     type="submit"
                                     className="mx-auto"
                                     disabled={isSubmitting}
-                                    isLoading={isSubmitting}
+                                    loading={isSubmitting}
                                 >
                                     変更を保存する
                                 </Button>
