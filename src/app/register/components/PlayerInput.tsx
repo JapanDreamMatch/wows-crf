@@ -111,19 +111,18 @@ export default function PlayerInput<T extends FieldValues = never>(
                         })}
                     />
                     <Field.ErrorText>{errorMsg}</Field.ErrorText>
-                    <HStack
-                        hidden={accountId === undefined}
-                        justify="right"
-                    >
-                        <p>アカウント: </p>
-                        <Link
-                            href={`https://profile.worldofwarships.asia/statistics/${accountId}`}
-                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-                            target="_blank"
-                        >
-                            {`https://profile.worldofwarships.asia/statistics/${accountId}`}
-                        </Link>
-                    </HStack>
+                    {accountId !== undefined && (
+                        <HStack justify="right">
+                            <p>アカウント: </p>
+                            <Link
+                                href={`https://profile.worldofwarships.asia/statistics/${accountId}`}
+                                className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                target="_blank"
+                            >
+                                {`https://profile.worldofwarships.asia/statistics/${accountId}`}
+                            </Link>
+                        </HStack>
+                    )}
 
                 </div>
             </Box>
