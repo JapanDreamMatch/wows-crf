@@ -45,7 +45,7 @@ export default function ContestantRegister() {
 
     if (status === "loading") {
         return (
-            <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+            <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center flex flex-col items-center">
                         <span className="inline-flex items-center justify-center">
@@ -77,7 +77,7 @@ export default function ContestantRegister() {
             message = "現在は募集期間ではありません";
         }
         return (
-            <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+            <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
                 <Box m={4} className="max-w-full">
                     <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                         <Heading size="lg" className="mb-4">{message}</Heading>
@@ -93,14 +93,14 @@ export default function ContestantRegister() {
     }
 
     return (
-        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
             <Box m={4} className="max-w-full">
 
                 {/* フォーム注意事項 */}
-                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
+                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 mt-2 mx-4">
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4">
                         フォーム注意事項
                     </Heading>
                     <p className="break-all mx-4 my-2">・このフォームは、出場チーム1つにつき1つ提出となります。</p>

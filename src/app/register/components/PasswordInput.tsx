@@ -31,7 +31,7 @@ export default function PasswordInput<T extends FieldValues = never>({
             <FormControl isInvalid={Boolean(errorMsg)} className="mb-4">
                 <div className="mt-2">
                     <FormLabel className="pl-2 mb-1">出場者変更用パスワード</FormLabel>
-                    <FormHelperText className="pl-2 mb-2 text-xs text-slate-300">
+                    <FormHelperText className="pl-2 mb-2 text-xs text-slate-600 dark:text-slate-300">
                         ※出場メンバー等の変更時に必要となります。忘れないよう必ず控えてください。（{MIN_PASSWORD_LENGTH}文字以上）
                     </FormHelperText>
                 </div>
@@ -52,7 +52,7 @@ export default function PasswordInput<T extends FieldValues = never>({
                         type="button"
                         variant="outline"
                         colorScheme="gray"
-                        className="text-slate-100 hover:bg-slate-600 shrink-0"
+                        className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                         onClick={() => setShowPassword((prev) => !prev)}
                     >
                         {showPassword ? "隠す" : "表示"}

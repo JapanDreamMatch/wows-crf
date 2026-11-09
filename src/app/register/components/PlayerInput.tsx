@@ -118,7 +118,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                         <p>アカウント: </p>
                         <Link
                             href={`https://profile.worldofwarships.asia/statistics/${accountId}`}
-                            className="text-blue-400 hover:underline break-all"
+                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
                             target="_blank"
                         >
                             {`https://profile.worldofwarships.asia/statistics/${accountId}`}

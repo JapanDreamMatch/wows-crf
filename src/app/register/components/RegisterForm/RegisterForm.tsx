@@ -70,10 +70,10 @@ export default function RegisterForm(){
                 >
 
                 {/* チーム概要 */}
-                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
+                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 mt-2 mx-4">
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4">
                         チーム概要
                     </Heading>
                     <div className="mx-auto w-4/5">
@@ -115,10 +115,10 @@ export default function RegisterForm(){
                 </Box>
 
                 {/* 出場者 */}
-                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
+                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 mt-2 mx-4">
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4">
                         出場者
                     </Heading>
                     <div className="mx-auto w-4/5">
@@ -208,10 +208,10 @@ export default function RegisterForm(){
                 </Box>
 
                 {/* その他ご意見ご質問 */}
-                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
+                <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 mt-2 mx-4">
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4">
                         その他ご意見ご質問
                     </Heading>
                     <div className="mx-auto w-4/5">

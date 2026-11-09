@@ -54,7 +54,7 @@ export default function TeamLogoInput<T extends FieldValues = never>(
                         className="pt-1"
                         {...rest}
                     />
-                    <FormHelperText className="pl-2 text-xs text-gray-500">
+                    <FormHelperText className="pl-2 text-xs text-slate-500 dark:text-slate-400">
                         ※jpeg, jpg, png形式、20MB以内、1枚のみ
                     </FormHelperText>
                     <FormErrorMessage>{errorMsg}</FormErrorMessage>

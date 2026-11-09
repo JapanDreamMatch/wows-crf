@@ -26,15 +26,15 @@ export function JdmDiscordLink(){
 
     if(discordLink === "#") {
         return (
-            <span className="hover:underline text-blue-400"> DiscordLink取得中... </span>
+            <span className="hover:underline text-blue-600 dark:text-blue-400"> DiscordLink取得中... </span>
         )
     }else if(discordLink === "Failed to load content.") {
         return (
-            <span className="hover:underline text-blue-400"> DiscordLinkの取得に失敗 </span>
+            <span className="hover:underline text-blue-600 dark:text-blue-400"> DiscordLinkの取得に失敗 </span>
         )
     }else{
         return (
-            <a href={discordLink} className="hover:underline text-blue-400" target="_blank">
+            <a href={discordLink} className="hover:underline text-blue-600 dark:text-blue-400" target="_blank">
                 JDM 運営Discord
             </a>
         )

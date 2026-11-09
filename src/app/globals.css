@@ -3,22 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  color-scheme: light dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+:root:has(> head > meta[name="color-scheme"][content="dark"]),
+html.dark {
+  color-scheme: dark;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="light"]),
+html.light {
+  color-scheme: light;
 }
 
 body {
-  color: #f1f5f9;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.dark body {
   background-color: #1f2937;
+  color: #f1f5f9;
 }
 
 @layer utilities {
