@@ -19,6 +19,7 @@ import {
 } from "@/util/ShipCheckRules";
 
 type ShipCheckerApiResponse = {
+    version?: string;
     countries: string[];
     ships: ShipData[];
     rules: ShipRuleSet;
@@ -193,18 +194,18 @@ function shipTypeFilterLabel(type: ShipType): string {
 
 function shipTypeBadgeClass(type: ShipType): string {
     if (type === "dd") {
-        return "bg-sky-700/70 text-sky-100";
+        return "bg-sky-600 text-white dark:bg-sky-700/70 dark:text-sky-100";
     }
     if (type === "cr") {
-        return "bg-teal-700/70 text-teal-100";
+        return "bg-teal-600 text-white dark:bg-teal-700/70 dark:text-teal-100";
     }
     if (type === "bb") {
-        return "bg-amber-700/70 text-amber-100";
+        return "bg-amber-600 text-white dark:bg-amber-700/70 dark:text-amber-100";
     }
     if (type === "cv") {
-        return "bg-rose-700/70 text-rose-100";
+        return "bg-rose-600 text-white dark:bg-rose-700/70 dark:text-rose-100";
     }
-    return "bg-violet-700/70 text-violet-100";
+    return "bg-violet-600 text-white dark:bg-violet-700/70 dark:text-violet-100";
 }
 
 function normalizeShipType(type: string): ShipType | null {
@@ -238,7 +239,7 @@ function getCountryIconPath(country: string): string | null {
 }
 
 function ShipTypeIcon({ type }: { type: ShipType }) {
-    return <Image src={SHIP_TYPE_ICON_PATHS[type]} alt="" width={14} height={14} className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />;
+    return <Image src={SHIP_TYPE_ICON_PATHS[type]} alt="" width={14} height={14} className="h-3.5 w-3.5 shrink-0 brightness-0 dark:brightness-100" aria-hidden="true" />;
 }
 
 function CountryFlagIcon({ country }: { country: string }) {
@@ -353,7 +354,7 @@ function IconFilterDropdown({
 
     return (
         <div ref={rootRef} className="relative">
-            <label htmlFor={id} className="mb-1 block text-xs text-slate-300">
+            <label htmlFor={id} className="mb-1 block text-xs text-slate-600 dark:text-slate-300">
                 {label}
             </label>
 
@@ -361,7 +362,7 @@ function IconFilterDropdown({
                 id={id}
                 type="button"
                 onClick={() => setIsOpen((previous) => !previous)}
-                className="flex w-full items-center justify-between rounded border border-slate-600 bg-slate-950 px-2 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                className="flex w-full items-center justify-between rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-2 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-cyan-500"
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
             >
@@ -369,7 +370,7 @@ function IconFilterDropdown({
                     {selectedOption?.icon}
                     <span>{selectedOption?.label}</span>
                 </span>
-                <span className={`text-[10px] text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true">
+                <span className={`text-[10px] text-slate-500 dark:text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true">
                     ▼
                 </span>
             </button>
@@ -378,7 +379,7 @@ function IconFilterDropdown({
                 <ul
                     role="listbox"
                     aria-labelledby={id}
-                    className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded border border-slate-600 bg-slate-900 shadow-lg"
+                    className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-lg"
                 >
                     {options.map((option) => (
                         <li key={option.value}>
@@ -392,8 +393,8 @@ function IconFilterDropdown({
                                 }}
                                 className={`flex w-full items-center gap-2 px-2 py-2 text-left text-sm ${
                                     option.value === value
-                                        ? "bg-cyan-700/40 text-cyan-100"
-                                        : "text-slate-100 hover:bg-slate-700/70"
+                                        ? "bg-cyan-100 text-cyan-900 dark:bg-cyan-700/40 dark:text-cyan-100"
+                                        : "text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-700/70"
                                 }`}
                             >
                                 {option.icon}
@@ -409,7 +410,7 @@ function IconFilterDropdown({
 
 function ShipTypeBadge({ type }: { type: ShipType }) {
     return (
-        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 ${shipTypeBadgeClass(type)}`}>
+        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 [&_img]:!brightness-100 ${shipTypeBadgeClass(type)}`}>
             <ShipTypeIcon type={type} />
             <span>{shipTypeFilterLabel(type)}</span>
         </span>
@@ -418,7 +419,7 @@ function ShipTypeBadge({ type }: { type: ShipType }) {
 
 function CountryBadge({ country }: { country: string }) {
     return (
-        <span className="inline-flex items-center gap-1 rounded bg-slate-700 px-2 py-0.5">
+        <span className="inline-flex items-center gap-1 rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 px-2 py-0.5">
             <CountryFlagIcon country={country} />
             <span>{country}</span>
         </span>
@@ -667,8 +668,8 @@ export default function ShipCheckerClient() {
 
     if (status === "loading") {
         return (
-            <main className="min-h-screen bg-gray-800 px-4 py-6 text-slate-100">
-                <div className="mx-auto max-w-5xl rounded-lg border border-slate-700 bg-slate-900/40 p-6">
+            <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+                <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-6 shadow-sm dark:shadow-none">
                     {text.loadingData}
                 </div>
             </main>
@@ -677,11 +678,11 @@ export default function ShipCheckerClient() {
 
     if (status === "error" || !data) {
         return (
-            <main className="min-h-screen bg-gray-800 px-4 py-6 text-slate-100">
-                <div className="mx-auto max-w-5xl rounded-lg border border-rose-700 bg-rose-900/20 p-6">
+            <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-4 py-6 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+                <div className="mx-auto max-w-5xl rounded-lg border border-rose-400 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20 p-6">
                     <p>{displayedErrorMessage}</p>
                     <div className="mt-4">
-                        <Link href="/" className="rounded bg-slate-700 px-3 py-2 text-sm hover:bg-slate-600">
+                        <Link href="/" className="rounded bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 px-3 py-2 text-sm dark:hover:bg-slate-600">
                             {text.backToTop}
                         </Link>
                     </div>
@@ -691,23 +692,30 @@ export default function ShipCheckerClient() {
     }
 
     return (
-        <main className="min-h-screen bg-gray-800 px-3 py-4 text-slate-100 md:px-6 md:py-6">
+        <main className="min-h-screen bg-slate-50 dark:bg-gray-800 px-3 py-4 text-slate-900 dark:text-slate-100 md:px-6 md:py-6 transition-colors duration-200">
             <div className="mx-auto max-w-[1220px] space-y-4">
-                <header className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+                <header className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <h1 className="text-2xl font-semibold">{text.title}</h1>
-                            <p className="mt-2 text-sm text-slate-300">{text.description}</p>
+                            <div className="flex flex-wrap items-baseline gap-2.5">
+                                <h1 className="text-2xl font-semibold">{text.title}</h1>
+                                {data.version && (
+                                    <span className="rounded-md border border-cyan-500/40 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-950/60 px-2.5 py-0.5 text-sm font-medium text-cyan-700 dark:text-cyan-300">
+                                        for {data.version}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{text.description}</p>
                         </div>
 
                         <div className="self-start">
-                            <p className="mb-1 text-xs text-slate-300">{text.languageLabel}</p>
-                            <div className="inline-flex rounded border border-slate-600 bg-slate-950/70 p-0.5">
+                            <p className="mb-1 text-xs text-slate-600 dark:text-slate-300">{text.languageLabel}</p>
+                            <div className="inline-flex rounded border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-950/70 p-0.5">
                                 <button
                                     type="button"
                                     onClick={() => setLocale("en")}
                                     className={`rounded px-3 py-1 text-xs font-medium ${
-                                        locale === "en" ? "bg-cyan-700 text-cyan-100" : "text-slate-300 hover:bg-slate-800"
+                                        locale === "en" ? "bg-cyan-600 text-white dark:bg-cyan-700 dark:text-cyan-100" : "text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
                                     }`}
                                     aria-pressed={locale === "en"}
                                 >
@@ -717,7 +725,7 @@ export default function ShipCheckerClient() {
                                     type="button"
                                     onClick={() => setLocale("ja")}
                                     className={`rounded px-3 py-1 text-xs font-medium ${
-                                        locale === "ja" ? "bg-cyan-700 text-cyan-100" : "text-slate-300 hover:bg-slate-800"
+                                        locale === "ja" ? "bg-cyan-600 text-white dark:bg-cyan-700 dark:text-cyan-100" : "text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
                                     }`}
                                     aria-pressed={locale === "ja"}
                                 >
@@ -729,32 +737,32 @@ export default function ShipCheckerClient() {
                 </header>
 
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <section className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+                    <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                         <h2 className="text-lg font-semibold">{text.selectedShips}</h2>
-                        <p className="mt-1 text-sm text-slate-300">{text.selectedAmount(selectedEntries.length, data.rules.shipAmount)}</p>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{text.selectedAmount(selectedEntries.length, data.rules.shipAmount)}</p>
 
                         {selectedEntries.length === 0 ? (
-                            <p className="mt-4 rounded border border-dashed border-slate-600 p-3 text-sm text-slate-400">
+                            <p className="mt-4 rounded border border-dashed border-slate-300 dark:border-slate-600 p-3 text-sm text-slate-500 dark:text-slate-400">
                                 {text.noShipSelected}
                             </p>
                         ) : (
                             <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto pr-1">
                                 {selectedEntries.map((entry, index) => (
-                                    <article key={`${entry.ship.id}-${index}`} className="rounded border border-slate-600 bg-slate-950/40 p-3">
+                                    <article key={`${entry.ship.id}-${index}`} className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="space-y-1">
                                                 <p className="text-sm font-semibold">{text.slotLabel(index + 1, entry.ship.displayName)}</p>
-                                                <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+                                                <div className="flex flex-wrap gap-2 text-xs text-slate-700 dark:text-slate-300">
                                                     <ShipTypeBadge type={entry.ship.type} />
                                                     <CountryBadge country={entry.ship.country} />
-                                                    <span className="rounded bg-slate-700 px-2 py-0.5">{text.tierLabel(entry.ship.tier)}</span>
+                                                    <span className="rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 px-2 py-0.5">{text.tierLabel(entry.ship.tier)}</span>
                                                     {entry.ship.hasRader !== "No" && (
-                                                        <span className="rounded bg-cyan-700/70 px-2 py-0.5 text-cyan-100">
+                                                        <span className="rounded bg-cyan-600 text-white dark:bg-cyan-700/70 px-2 py-0.5 dark:text-cyan-100">
                                                             {text.radarLabel(entry.ship.hasRader)}
                                                         </span>
                                                     )}
                                                     {entry.ship.hasAircraft && (
-                                                        <span className="rounded bg-indigo-700/70 px-2 py-0.5 text-indigo-100">
+                                                        <span className="rounded bg-indigo-600 text-white dark:bg-indigo-700/70 px-2 py-0.5 dark:text-indigo-100">
                                                             {text.aircraftLabel}
                                                         </span>
                                                     )}
@@ -764,14 +772,14 @@ export default function ShipCheckerClient() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveShip(index)}
-                                                className="rounded bg-rose-700 px-3 py-1 text-xs font-medium hover:bg-rose-600"
+                                                className="rounded bg-rose-600 text-white dark:bg-rose-700 px-3 py-1 text-xs font-medium hover:bg-rose-500 dark:hover:bg-rose-600"
                                             >
                                                 {text.removeButton}
                                             </button>
                                         </div>
 
                                         {entry.ship.hasRader === "Optional" && (
-                                            <label className="mt-3 inline-flex items-center gap-2 text-xs text-slate-300">
+                                            <label className="mt-3 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                                                 <input
                                                     type="checkbox"
                                                     checked={entry.useOptionalRadar}
@@ -785,17 +793,17 @@ export default function ShipCheckerClient() {
                             </div>
                         )}
 
-                        <div className="mt-4 rounded border border-slate-600 bg-slate-950/40 p-3">
+                        <div className="mt-4 rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
                             <h3 className="text-sm font-semibold">{text.ruleCheck}</h3>
                             <div className="mt-2 max-h-56 overflow-y-auto pr-1 text-sm">
                                 {evaluation?.counters.map((counter) => (
                                     <div key={counter.id} className="flex items-start justify-between gap-3 py-1">
-                                        <span className={counter.isViolation ? "text-rose-300" : "text-slate-300"}>
+                                        <span className={counter.isViolation ? "text-rose-600 dark:text-rose-300 font-medium" : "text-slate-700 dark:text-slate-300"}>
                                             <RuleCounterLabel counter={counter} rule={ruleById.get(counter.id)} locale={locale} />
                                         </span>
                                         <span
                                             className={`rounded px-2 py-0.5 text-xs ${
-                                                counter.isViolation ? "bg-rose-900/60 text-rose-100" : "bg-slate-700 text-slate-200"
+                                                counter.isViolation ? "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-100" : "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
                                             }`}
                                         >
                                             {counter.actual}/{counter.limit}
@@ -805,19 +813,19 @@ export default function ShipCheckerClient() {
                             </div>
 
                             {(evaluation?.violations.length ?? 0) > 0 && (
-                                <p className="mt-2 text-xs text-rose-300">
+                                <p className="mt-2 text-xs text-rose-600 dark:text-rose-300 font-medium">
                                     {text.ruleViolationDetected(evaluation?.violations.length ?? 0)}
                                 </p>
                             )}
                         </div>
                     </section>
 
-                    <section className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+                    <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                         <h2 className="text-lg font-semibold">{text.availableShips}</h2>
 
                         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
                             <div>
-                                <label htmlFor="ship-name-filter" className="mb-1 block text-xs text-slate-300">
+                                <label htmlFor="ship-name-filter" className="mb-1 block text-xs text-slate-600 dark:text-slate-300">
                                     {text.nameSearch}
                                 </label>
                                 <input
@@ -825,7 +833,7 @@ export default function ShipCheckerClient() {
                                     value={nameFilter}
                                     onChange={(event) => setNameFilter(event.target.value)}
                                     placeholder={text.nameSearchPlaceholder}
-                                    className="w-full rounded border border-slate-600 bg-slate-950 px-2 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                                    className="w-full rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-2 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-cyan-500"
                                 />
                             </div>
 
@@ -872,7 +880,7 @@ export default function ShipCheckerClient() {
                         </div>
 
                         <div className="mt-2">
-                            <label className="inline-flex items-center gap-2 rounded border border-slate-600 bg-slate-950 px-2 py-2 text-xs text-slate-200">
+                            <label className="inline-flex items-center gap-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-2 py-2 text-xs text-slate-700 dark:text-slate-200">
                                 <input
                                     type="checkbox"
                                     checked={excludeUnselectableShips}
@@ -882,40 +890,40 @@ export default function ShipCheckerClient() {
                             </label>
                         </div>
 
-                        <p className="mt-3 text-xs text-slate-400">{text.searchResult(visibleShips.length)}</p>
+                        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{text.searchResult(visibleShips.length)}</p>
 
                         <div className="mt-3 max-h-[70vh] space-y-2 overflow-y-auto pr-1">
                             {visibleShips.map((ship) => {
                                 const selectedCount = selectedCountByShipId.get(ship.id) ?? 0;
 
                                 return (
-                                    <article key={ship.id} className="rounded border border-slate-600 bg-slate-950/40 p-3">
+                                    <article key={ship.id} className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-950/40 p-3">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="space-y-1">
                                                 <p className="text-sm font-semibold">{ship.displayName}</p>
                                                 {ship.aliases.length > 1 && (
-                                                    <p className="text-xs text-slate-400">{text.aliasesLabel(ship.aliases.join(" / "))}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{text.aliasesLabel(ship.aliases.join(" / "))}</p>
                                                 )}
                                                 {ship.model && (
-                                                    <p className="text-xs text-slate-400">{text.modelShipLabel(ship.model)}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{text.modelShipLabel(ship.model)}</p>
                                                 )}
 
-                                                <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+                                                <div className="flex flex-wrap gap-2 text-xs text-slate-700 dark:text-slate-200">
                                                     <ShipTypeBadge type={ship.type} />
                                                     <CountryBadge country={ship.country} />
-                                                    <span className="rounded bg-slate-700 px-2 py-0.5">{text.tierLabel(ship.tier)}</span>
+                                                    <span className="rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 px-2 py-0.5">{text.tierLabel(ship.tier)}</span>
                                                     {ship.hasRader !== "No" && (
-                                                        <span className="rounded bg-cyan-700/70 px-2 py-0.5 text-cyan-100">
+                                                        <span className="rounded bg-cyan-600 text-white dark:bg-cyan-700/70 px-2 py-0.5 dark:text-cyan-100">
                                                             {text.radarLabel(ship.hasRader)}
                                                         </span>
                                                     )}
                                                     {ship.hasAircraft && (
-                                                        <span className="rounded bg-indigo-700/70 px-2 py-0.5 text-indigo-100">
+                                                        <span className="rounded bg-indigo-600 text-white dark:bg-indigo-700/70 px-2 py-0.5 dark:text-indigo-100">
                                                             {text.aircraftLabel}
                                                         </span>
                                                     )}
                                                     {ship.isBan && (
-                                                        <span className="rounded bg-rose-700/70 px-2 py-0.5 text-rose-100">
+                                                        <span className="rounded bg-rose-600 text-white dark:bg-rose-700/70 px-2 py-0.5 dark:text-rose-100">
                                                             {text.sheetBanLabel}
                                                         </span>
                                                     )}
@@ -924,12 +932,12 @@ export default function ShipCheckerClient() {
 
                                             <div className="text-right">
                                                 {selectedCount > 0 && (
-                                                    <p className="mb-1 text-xs text-cyan-300">{text.selectedCount(selectedCount)}</p>
+                                                    <p className="mb-1 text-xs text-cyan-700 dark:text-cyan-300 font-medium">{text.selectedCount(selectedCount)}</p>
                                                 )}
                                                 <button
                                                     type="button"
                                                     onClick={() => handleAddShip(ship)}
-                                                    className="rounded bg-cyan-700 px-3 py-1 text-xs font-medium hover:bg-cyan-600"
+                                                    className="rounded bg-cyan-600 text-white dark:bg-cyan-700 px-3 py-1 text-xs font-medium hover:bg-cyan-500 dark:hover:bg-cyan-600"
                                                 >
                                                     {text.addButton}
                                                 </button>

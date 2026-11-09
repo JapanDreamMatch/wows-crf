@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function UpdateSuccessPage() {
     return (
-        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
             <Box m={4} className="max-w-full">
                 <Box className="max-w-3xl p-2 mx-auto my-4 text-center">
                     <Heading size="lg" className="mb-4">

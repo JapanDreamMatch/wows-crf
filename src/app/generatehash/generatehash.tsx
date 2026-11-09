@@ -67,17 +67,17 @@ export default function GenerateHashClient() {
     };
 
     return (
-        <div className="text-slate-100 bg-gray-800 min-h-screen py-8">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-8 transition-colors duration-200">
             <Box className="max-w-3xl p-4 mx-auto">
-                <Box borderWidth="1px" borderRadius="lg" className="p-6 my-4">
+                <Box borderWidth="1px" borderRadius="lg" className="p-6 my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 pb-2 mb-6"
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 pb-2 mb-6"
                     >
                         パスワードハッシュ生成ツール (管理者用)
                     </Heading>
 
-                    <Text className="text-sm text-slate-300 mb-6">
+                    <Text className="text-sm text-slate-600 dark:text-slate-300 mb-6">
                         パスワードソルト（H2セル）とパスワードを入力すると、Argon2idハッシュ（H3セル）をブラウザ内で計算します。入力内容は外部へ送信されません。
                     </Text>
 
@@ -94,14 +94,14 @@ export default function GenerateHashClient() {
                                 <Button
                                     colorScheme="gray"
                                     variant="outline"
-                                    className="text-slate-100 hover:bg-slate-600 shrink-0"
+                                    className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                     onClick={handleGenerateRandomSalt}
                                     type="button"
                                 >
                                     ランダム生成
                                 </Button>
                             </HStack>
-                            <FormHelperText className="text-xs text-slate-400">
+                            <FormHelperText className="text-xs text-slate-500 dark:text-slate-400">
                                 ※SpreadsheetのH2セルに記載されている32文字の16進文字列（16バイトへデコードして計算されます）
                             </FormHelperText>
                         </FormControl>
@@ -118,7 +118,7 @@ export default function GenerateHashClient() {
                                 <Button
                                     colorScheme="gray"
                                     variant="outline"
-                                    className="text-slate-100 hover:bg-slate-600 shrink-0"
+                                    className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                     onClick={() => setShowPassword((prev) => !prev)}
                                     type="button"
                                 >
@@ -147,9 +147,9 @@ export default function GenerateHashClient() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="md"
-                                className="p-4 bg-gray-900 mt-4"
+                                className="p-4 bg-slate-100 dark:bg-gray-900 border-slate-200 dark:border-slate-700 mt-4"
                             >
-                                <FormLabel className="text-sm text-teal-300">
+                                <FormLabel className="text-sm text-teal-700 dark:text-teal-300">
                                     生成されたパスワードハッシュ (H3セル)
                                 </FormLabel>
                                 <HStack>
@@ -157,7 +157,7 @@ export default function GenerateHashClient() {
                                         value={hash}
                                         isReadOnly
                                         fontFamily="monospace"
-                                        className="bg-gray-800"
+                                        className="bg-white dark:bg-gray-800"
                                     />
                                     <Button
                                         colorScheme="teal"
@@ -172,7 +172,7 @@ export default function GenerateHashClient() {
                             </Box>
                         )}
 
-                        <Box className="text-xs text-slate-400 pt-4 border-t border-slate-600">
+                        <Box className="text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-600">
                             <p>
                                 アルゴリズム: Argon2id (iterations={ARGON2_CONFIG.iterations},{" "}
                                 memorySize={ARGON2_CONFIG.memorySize}KiB, parallelism=
@@ -184,7 +184,7 @@ export default function GenerateHashClient() {
 
                 <Box className="text-center mt-6">
                     <Link href="/">
-                        <Button variant="outline" className="text-slate-100 hover:bg-slate-600">
+                        <Button variant="outline" className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600">
                             トップページに戻る
                         </Button>
                     </Link>

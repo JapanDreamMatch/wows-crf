@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
     Box,
     Button,
@@ -21,6 +21,9 @@ import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import type { TeamData } from "@/util/TeamAuth";
+import { SubmitProgressProvider } from "@/components/SubmitProgressContext";
+import SubmitProgressBox from "@/components/SubmitProgressBox";
+import { postWithProgress } from "@/util/postWithProgress";
 
 interface UpdateFormValues {
     teamLogo?: FileList | File | null;
@@ -52,6 +55,16 @@ export default function TeamUpdatePage() {
     const [teamData, setTeamData] = useState<TeamData | null>(null);
     const [verifiedPassword, setVerifiedPassword] = useState<string>("");
     const [updateError, setUpdateError] = useState<string>("");
+    const isSubmittingClickRef = useRef(false);
+    const [progressState, setProgressState] = useState({
+        stepText: "",
+        progress: 0,
+    });
+
+    const updateStep = (stepText: string, progress: number) => {
+        if (!isSubmittingClickRef.current) return;
+        setProgressState({ stepText, progress });
+    };
 
     const methods = useForm<UpdateFormValues>({
         mode: "onBlur",
@@ -143,29 +156,41 @@ export default function TeamUpdatePage() {
         sendData.append("comment", data.comment ?? "");
 
         try {
-            await axios.post("/api/team/update", sendData);
+            await postWithProgress(
+                "/api/team/update",
+                sendData,
+                (stepText, progress) => {
+                    setProgressState({ stepText, progress });
+                },
+                "更新に失敗しました。しばらくしてから再度お試しください"
+            );
             router.push("/update/success");
         } catch (err: any) {
+            isSubmittingClickRef.current = false;
             setUpdateError(
-                err?.response?.data?.message || "更新に失敗しました。しばらくしてから再度お試しください"
+                err?.message || "更新に失敗しました。しばらくしてから再度お試しください"
             );
         }
     };
 
+    const handleInvalid = () => {
+        isSubmittingClickRef.current = false;
+    };
+
     return (
-        <div className="text-slate-100 bg-gray-800 min-h-screen py-4">
+        <div className="text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-gray-800 min-h-screen py-4 transition-colors duration-200">
             <Box m={4} className="max-w-full">
                 {/* Phase 1: チーム認証 */}
-                <Box borderWidth="1px" borderRadius="lg" className="max-w-3xl p-4 mx-auto my-4">
+                <Box borderWidth="1px" borderRadius="lg" className="max-w-3xl p-4 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                     <Heading
                         size="lg"
-                        className="text-center border-b-2 border-slate-400 mt-2 mx-4 pb-2"
+                        className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4 pb-2"
                     >
                         出場者の変更（チーム認証）
                     </Heading>
                     <form onSubmit={handleVerify} className="mx-auto w-4/5 py-4">
                         <VStack spacing={4} align="stretch">
-                            <Text className="text-sm text-slate-300">
+                            <Text className="text-sm text-slate-600 dark:text-slate-300">
                                 応募時に登録した「チーム略名」と「出場者変更用パスワード」を入力して、現在の登録情報を読み込んでください。
                             </Text>
 
@@ -191,7 +216,7 @@ export default function TeamUpdatePage() {
                                         type="button"
                                         variant="outline"
                                         colorScheme="gray"
-                                        className="text-slate-100 hover:bg-slate-600 shrink-0"
+                                        className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 shrink-0"
                                         onClick={() => setShowAuthPassword((prev) => !prev)}
                                     >
                                         {showAuthPassword ? "隠す" : "表示"}
@@ -219,17 +244,24 @@ export default function TeamUpdatePage() {
 
                 {/* Phase 2: 編集フォーム（認証成功後に表示） */}
                 {teamData && (
-                    <FormProvider {...methods}>
-                        <form onSubmit={methods.handleSubmit(handleUpdateSubmit)}>
+                    <SubmitProgressProvider value={{ updateStep }}>
+                        <FormProvider {...methods}>
+                            <form
+                                onSubmit={(e) => {
+                                    isSubmittingClickRef.current = true;
+                                    setProgressState({ stepText: "入力内容の確認中...", progress: 1 });
+                                    return methods.handleSubmit(handleUpdateSubmit, handleInvalid)(e);
+                                }}
+                            >
                             {/* チーム概要 */}
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
                                 >
                                     チーム概要
                                 </Heading>
@@ -281,7 +313,7 @@ export default function TeamUpdatePage() {
                                                 <img
                                                     src={teamData.logoUrl}
                                                     alt="現在のチームロゴ"
-                                                    className="max-h-32 rounded border border-slate-600 object-contain"
+                                                    className="max-h-32 rounded border border-slate-300 dark:border-slate-600 object-contain"
                                                 />
                                             </div>
                                         </Box>
@@ -291,7 +323,7 @@ export default function TeamUpdatePage() {
                                         rhfName={"teamLogo"}
                                         errorMsg={errors.teamLogo && errors.teamLogo.message}
                                     />
-                                    <Text className="pl-4 text-xs text-slate-400 -mt-2 mb-2">
+                                    <Text className="pl-4 text-xs text-slate-500 dark:text-slate-400 -mt-2 mb-2">
                                         ※新しい画像を選択しない場合、現在のチームロゴがそのまま維持されます。
                                     </Text>
 
@@ -307,11 +339,11 @@ export default function TeamUpdatePage() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
                                 >
                                     出場者
                                 </Heading>
@@ -383,11 +415,11 @@ export default function TeamUpdatePage() {
                             <Box
                                 borderWidth="1px"
                                 borderRadius="lg"
-                                className="max-w-3xl p-2 mx-auto my-4"
+                                className="max-w-3xl p-2 mx-auto my-4 bg-white dark:bg-transparent border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
                             >
                                 <Heading
                                     size="lg"
-                                    className="text-center border-b-2 border-slate-400 mt-2 mx-4"
+                                    className="text-center border-b-2 border-slate-300 dark:border-slate-400 mt-2 mx-4"
                                 >
                                     その他ご意見ご質問
                                 </Heading>
@@ -425,18 +457,20 @@ export default function TeamUpdatePage() {
                                     変更を保存する
                                 </Button>
                                 {isSubmitting && (
-                                    <Text className="mt-3 text-teal-300 font-bold text-center">
-                                        送信中。しばらくお待ちください
-                                    </Text>
+                                    <SubmitProgressBox
+                                        stepText={progressState.stepText}
+                                        progress={progressState.progress}
+                                    />
                                 )}
                             </Box>
-                        </form>
-                    </FormProvider>
+                            </form>
+                        </FormProvider>
+                    </SubmitProgressProvider>
                 )}
 
                 <Box className="max-w-3xl mx-auto text-center pb-12">
                     <Link href="/">
-                        <Button variant="outline" className="text-slate-100 hover:bg-slate-600">
+                        <Button variant="outline" className="text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600">
                             トップページに戻る
                         </Button>
                     </Link>

@@ -251,6 +251,15 @@ async function loadRules(spreadSheet: GoogleSpreadsheetService, countries: strin
     };
 }
 
+async function loadVersion(spreadSheet: GoogleSpreadsheetService): Promise<string> {
+    const versionSheet = await spreadSheet.getSheet("version");
+    if (!versionSheet) {
+        return "";
+    }
+    await versionSheet.loadCells("A1:A1");
+    return toCellText(versionSheet.getCell(0, 0).value);
+}
+
 export async function GET() {
     try {
         const sheetId = process.env.SHIP_AND_RULES_SHEET_ID;
@@ -261,11 +270,13 @@ export async function GET() {
         const spreadSheet = new GoogleSpreadsheetService(sheetId);
         await spreadSheet.getSheetNames();
 
+        const version = await loadVersion(spreadSheet);
         const countries = await loadCountryList(spreadSheet);
         const ships = await loadShips(spreadSheet);
         const rules = await loadRules(spreadSheet, countries);
 
         return NextResponse.json({
+            version,
             countries,
             ships,
             rules,
