@@ -19,6 +19,7 @@ import {
 } from "@/util/ShipCheckRules";
 
 type ShipCheckerApiResponse = {
+    version?: string;
     countries: string[];
     ships: ShipData[];
     rules: ShipRuleSet;
@@ -696,7 +697,14 @@ export default function ShipCheckerClient() {
                 <header className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <h1 className="text-2xl font-semibold">{text.title}</h1>
+                            <div className="flex flex-wrap items-baseline gap-2.5">
+                                <h1 className="text-2xl font-semibold">{text.title}</h1>
+                                {data.version && (
+                                    <span className="rounded-md border border-cyan-500/30 bg-cyan-950/60 px-2.5 py-0.5 text-sm font-medium text-cyan-300">
+                                        for {data.version}
+                                    </span>
+                                )}
+                            </div>
                             <p className="mt-2 text-sm text-slate-300">{text.description}</p>
                         </div>
 
