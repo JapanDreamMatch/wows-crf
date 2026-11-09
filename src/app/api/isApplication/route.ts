@@ -8,9 +8,12 @@ export async function POST() {
     const checkTeamAmount = await CheckTeamAmount();
     const isIgnore = await IsIgnore();
 
+    const canUpdate = isIgnore || checkTime ? "YES" : "NO";
+
     if(isIgnore || (checkTime && checkTeamAmount)){
-        return NextResponse.json({canRegister: "YES"});
+        return NextResponse.json({canRegister: "YES", canUpdate});
     }else {
-        return NextResponse.json({canRegister: "NO"});
+        const reason = !checkTime ? "period" : "amount";
+        return NextResponse.json({canRegister: "NO", canUpdate, reason});
     }
 }
