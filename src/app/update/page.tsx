@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
     Box,
     Button,
@@ -21,6 +21,9 @@ import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import type { TeamData } from "@/util/TeamAuth";
+import { SubmitProgressProvider } from "@/components/SubmitProgressContext";
+import SubmitProgressBox from "@/components/SubmitProgressBox";
+import { postWithProgress } from "@/util/postWithProgress";
 
 interface UpdateFormValues {
     teamLogo?: FileList | File | null;
@@ -52,6 +55,16 @@ export default function TeamUpdatePage() {
     const [teamData, setTeamData] = useState<TeamData | null>(null);
     const [verifiedPassword, setVerifiedPassword] = useState<string>("");
     const [updateError, setUpdateError] = useState<string>("");
+    const isSubmittingClickRef = useRef(false);
+    const [progressState, setProgressState] = useState({
+        stepText: "",
+        progress: 0,
+    });
+
+    const updateStep = (stepText: string, progress: number) => {
+        if (!isSubmittingClickRef.current) return;
+        setProgressState({ stepText, progress });
+    };
 
     const methods = useForm<UpdateFormValues>({
         mode: "onBlur",
@@ -143,13 +156,25 @@ export default function TeamUpdatePage() {
         sendData.append("comment", data.comment ?? "");
 
         try {
-            await axios.post("/api/team/update", sendData);
+            await postWithProgress(
+                "/api/team/update",
+                sendData,
+                (stepText, progress) => {
+                    setProgressState({ stepText, progress });
+                },
+                "更新に失敗しました。しばらくしてから再度お試しください"
+            );
             router.push("/update/success");
         } catch (err: any) {
+            isSubmittingClickRef.current = false;
             setUpdateError(
-                err?.response?.data?.message || "更新に失敗しました。しばらくしてから再度お試しください"
+                err?.message || "更新に失敗しました。しばらくしてから再度お試しください"
             );
         }
+    };
+
+    const handleInvalid = () => {
+        isSubmittingClickRef.current = false;
     };
 
     return (
@@ -219,8 +244,15 @@ export default function TeamUpdatePage() {
 
                 {/* Phase 2: 編集フォーム（認証成功後に表示） */}
                 {teamData && (
-                    <FormProvider {...methods}>
-                        <form onSubmit={methods.handleSubmit(handleUpdateSubmit)}>
+                    <SubmitProgressProvider value={{ updateStep }}>
+                        <FormProvider {...methods}>
+                            <form
+                                onSubmit={(e) => {
+                                    isSubmittingClickRef.current = true;
+                                    setProgressState({ stepText: "入力内容の確認中...", progress: 1 });
+                                    return methods.handleSubmit(handleUpdateSubmit, handleInvalid)(e);
+                                }}
+                            >
                             {/* チーム概要 */}
                             <Box
                                 borderWidth="1px"
@@ -425,13 +457,15 @@ export default function TeamUpdatePage() {
                                     変更を保存する
                                 </Button>
                                 {isSubmitting && (
-                                    <Text className="mt-3 text-teal-300 font-bold text-center">
-                                        送信中。しばらくお待ちください
-                                    </Text>
+                                    <SubmitProgressBox
+                                        stepText={progressState.stepText}
+                                        progress={progressState.progress}
+                                    />
                                 )}
                             </Box>
-                        </form>
-                    </FormProvider>
+                            </form>
+                        </FormProvider>
+                    </SubmitProgressProvider>
                 )}
 
                 <Box className="max-w-3xl mx-auto text-center pb-12">

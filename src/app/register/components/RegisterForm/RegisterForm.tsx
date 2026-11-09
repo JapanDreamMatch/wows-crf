@@ -1,6 +1,7 @@
 "use client"
 
-import {Box, Button, Heading, Text} from "@chakra-ui/react";
+import {useRef, useState} from "react";
+import {Box, Button, Heading} from "@chakra-ui/react";
 import {FormProvider, useForm} from "react-hook-form";
 import {registerType, useRegisterForm} from "@/app/register/components/RegisterForm/useRegisterForm";
 import PlayerInput from "@/app/register/components/PlayerInput";
@@ -11,11 +12,18 @@ import TeamLogoInput from "@/app/register/components/TeamLogoInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import {useRouter} from "next/navigation";
+import {SubmitProgressProvider} from "@/components/SubmitProgressContext";
+import SubmitProgressBox from "@/components/SubmitProgressBox";
 
 
 export default function RegisterForm(){
 
     const { onSubmit } = useRegisterForm();
+    const isSubmittingClickRef = useRef(false);
+    const [progressState, setProgressState] = useState({
+        stepText: "",
+        progress: 0,
+    });
 
     //react-hook-form Validation
     const methods  = useForm<registerType>({
@@ -27,20 +35,39 @@ export default function RegisterForm(){
     } = methods.formState;
     const router = useRouter();
 
+    const updateStep = (stepText: string, progress: number) => {
+        if (!isSubmittingClickRef.current) return;
+        setProgressState({ stepText, progress });
+    };
+
     // 送信ハンドラをラップしてエラー時に遷移
     const handleSubmit = async (data: registerType) => {
         try {
-            await onSubmit(data);
+            await onSubmit(data, (stepText, progress) => {
+                setProgressState({ stepText, progress });
+            });
             router.push('/register/success');
         } catch (e: any) {
+            isSubmittingClickRef.current = false;
             router.push(`/register/error?msg=${encodeURIComponent(e.message || "内部エラーが発生しました")}`);
         }
     };
 
+    const handleInvalid = () => {
+        isSubmittingClickRef.current = false;
+    };
+
 
     return(
-        <FormProvider {...methods}>
-            <form onSubmit={methods.handleSubmit(handleSubmit)}>
+        <SubmitProgressProvider value={{ updateStep }}>
+            <FormProvider {...methods}>
+                <form
+                    onSubmit={(e) => {
+                        isSubmittingClickRef.current = true;
+                        setProgressState({ stepText: "入力内容の確認中...", progress: 1 });
+                        return methods.handleSubmit(handleSubmit, handleInvalid)(e);
+                    }}
+                >
 
                 {/* チーム概要 */}
                 <Box borderWidth='1px' borderRadius='lg' className="max-w-3xl p-2 mx-auto my-4">
@@ -207,14 +234,16 @@ export default function RegisterForm(){
                         送信
                     </Button>
                     {isSubmitting && (
-                        <Text className="mt-3 text-teal-300 font-bold text-center">
-                            送信中。しばらくお待ちください
-                        </Text>
+                        <SubmitProgressBox
+                            stepText={progressState.stepText}
+                            progress={progressState.progress}
+                        />
                     )}
                 </Box>
 
-            </form>
-        </FormProvider>
+                </form>
+            </FormProvider>
+        </SubmitProgressProvider>
 
 
     )

@@ -24,6 +24,7 @@ export default function PlayerInput<T extends FieldValues = never>(
     } = useFormContext();
 
     const [accountId, setAccountId] = useState<string | undefined>(undefined);
+    const [lastValidatedUsername, setLastValidatedUsername] = useState<string | undefined>(undefined);
 
     return (
         <FormControl isInvalid={Boolean(errorMsg)} className="py-4">
@@ -38,9 +39,11 @@ export default function PlayerInput<T extends FieldValues = never>(
                         {...register(rhfName, {
                             validate: {
                                 required: v => {
-                                    setAccountId(undefined) //これを入れるために全部validateで処理している
                                     const value = v as string;
-                                    if(!canEmpty && value.length == 0) return "ゲーム内のプレイヤー名を入力してください"
+                                    if(!canEmpty && value.length == 0) {
+                                        setAccountId(undefined);
+                                        return "ゲーム内のプレイヤー名を入力してください";
+                                    }
                                 },
 
                                 pattern: v => {
@@ -48,6 +51,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     if (canEmpty && username.length == 0) return true; //補欠用
                                     const ptn = /^[a-zA-Z0-9_]+$/
                                     if(!ptn.test(username)){
+                                        setAccountId(undefined);
                                         return "有効なプレイヤー名を入力してください"
                                     }
                                 },
@@ -55,6 +59,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                 checkLength: v => {
                                     const value = v as string;
                                     if (value.length < 3 && !(canEmpty && value.length == 0)) {
+                                        setAccountId(undefined);
                                         return "プレイヤー名が短すぎます";
                                     }
                                     return true;
@@ -62,7 +67,16 @@ export default function PlayerInput<T extends FieldValues = never>(
 
                                 checkPlayer: async v => {
                                     const username = v as string;
-                                    if (canEmpty && username.length == 0) return true; //補欠用
+                                    if (canEmpty && username.length == 0) {
+                                        setAccountId(undefined);
+                                        setLastValidatedUsername("");
+                                        return true; //補欠用
+                                    }
+
+                                    // 既に同じユーザー名でチェック通過済みの場合は再通信をスキップ
+                                    if (accountId !== undefined && lastValidatedUsername === username) {
+                                        return true;
+                                    }
 
                                     const response = await axios.post(`/api/ign`, {username});
                                     const trulyName = response.data.nickname;
@@ -70,6 +84,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     const err = response.data.errorMsg;
 
                                     setAccountId(undefined);
+                                    setLastValidatedUsername(undefined);
 
                                     //エラーがある場合、エラー内容を返す
                                     if (err !== undefined) {
@@ -89,6 +104,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                     }
 
                                     setAccountId(uid);
+                                    setLastValidatedUsername(username);
                                     return true;
                                 }
                             }

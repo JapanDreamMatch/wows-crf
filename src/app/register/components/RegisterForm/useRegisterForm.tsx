@@ -1,7 +1,6 @@
 import {object, string} from "yup";
 import * as yup from "yup";
-import axios from "axios";
-import {SubmitHandler} from "react-hook-form";
+import {postWithProgress} from "@/util/postWithProgress";
 
 export const registerSchema = object({
     teamName: string(),
@@ -25,7 +24,10 @@ export const registerSchema = object({
 export type registerType = yup.InferType<typeof registerSchema>;
 
 //送信ボタンの動作
-export const onSubmit: SubmitHandler<registerType> = async (formData) => {
+export const onSubmit = async (
+    formData: registerType,
+    onProgress?: (step: string, progress: number) => void
+) => {
 
     let logo;
     if(formData.teamLogo instanceof FileList){
@@ -51,13 +53,13 @@ export const onSubmit: SubmitHandler<registerType> = async (formData) => {
     sendData.append("player9", formData.player9 ?? "");
     sendData.append("player10", formData.player10 ?? "");
     sendData.append("comment", formData.comment ?? "");
-    try {
-        const res = await axios.post(`/api/register`, sendData);
-        return res.data.message as string;
-    } catch (error: any) {
-        // エラーメッセージをthrow
-        throw new Error(error?.response?.data?.message || "登録に失敗しました");
-    }
+
+    return await postWithProgress(
+        `/api/register`,
+        sendData,
+        onProgress,
+        "登録に失敗しました"
+    );
 };
 
 export const useRegisterForm = () => {
