@@ -91,6 +91,7 @@ type ShipCheckerText = {
     tier: string;
     country: string;
     allFilter: string;
+    excludeBannedShips: string;
     excludeUnselectableShips: string;
     searchResult: (count: number) => string;
     aliasesLabel: (aliases: string) => string;
@@ -131,6 +132,7 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         tier: "Tier",
         country: "Country",
         allFilter: "All",
+        excludeBannedShips: "Exclude banned ships",
         excludeUnselectableShips: "Hide ships that cannot be selected",
         searchResult: (count) => `Search result: ${count} ships`,
         aliasesLabel: (aliases) => `Aliases: ${aliases}`,
@@ -169,6 +171,7 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         tier: "Tier",
         country: "国家",
         allFilter: "すべて",
+        excludeBannedShips: "使用禁止艦を除外",
         excludeUnselectableShips: "選択できない艦艇を除外",
         searchResult: (count) => `検索結果: ${count} 隻`,
         aliasesLabel: (aliases) => `別名: ${aliases}`,
@@ -438,6 +441,7 @@ export default function ShipCheckerClient() {
     const [typeFilter, setTypeFilter] = useState<ShipType | typeof ALL_FILTER>(ALL_FILTER);
     const [tierFilter, setTierFilter] = useState<number | typeof ALL_FILTER>(10);
     const [countryFilter, setCountryFilter] = useState<string>(ALL_FILTER);
+    const [excludeBannedShips, setExcludeBannedShips] = useState<boolean>(true);
     const [excludeUnselectableShips, setExcludeUnselectableShips] = useState<boolean>(false);
 
     const [selectedEntries, setSelectedEntries] = useState<SelectedShipEntry[]>([]);
@@ -611,6 +615,19 @@ export default function ShipCheckerClient() {
         ];
     }, [data, text]);
 
+    const initialAddAvailabilityMap = useMemo(() => {
+        const map = new Map<string, ReturnType<typeof getAddAvailability>>();
+        if (!data) {
+            return map;
+        }
+
+        for (const ship of filteredShips) {
+            map.set(ship.id, getAddAvailability([], ship, data.rules, locale));
+        }
+
+        return map;
+    }, [data, filteredShips, locale]);
+
     const addAvailabilityMap = useMemo(() => {
         const map = new Map<string, ReturnType<typeof getAddAvailability>>();
         if (!data) {
@@ -625,12 +642,16 @@ export default function ShipCheckerClient() {
     }, [data, filteredShips, locale, selectedEntries]);
 
     const visibleShips = useMemo(() => {
-        if (!excludeUnselectableShips) {
-            return filteredShips;
-        }
-
-        return filteredShips.filter((ship) => addAvailabilityMap.get(ship.id)?.allowed ?? true);
-    }, [addAvailabilityMap, excludeUnselectableShips, filteredShips]);
+        return filteredShips.filter((ship) => {
+            if (excludeBannedShips && !(initialAddAvailabilityMap.get(ship.id)?.allowed ?? true)) {
+                return false;
+            }
+            if (excludeUnselectableShips && !(addAvailabilityMap.get(ship.id)?.allowed ?? true)) {
+                return false;
+            }
+            return true;
+        });
+    }, [addAvailabilityMap, excludeBannedShips, excludeUnselectableShips, filteredShips, initialAddAvailabilityMap]);
 
     const handleAddShip = (ship: ShipData) => {
         if (!data) {
@@ -879,7 +900,15 @@ export default function ShipCheckerClient() {
 
                         </div>
 
-                        <div className="mt-2">
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            <label className="inline-flex items-center gap-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-2 py-2 text-xs text-slate-700 dark:text-slate-200">
+                                <input
+                                    type="checkbox"
+                                    checked={excludeBannedShips}
+                                    onChange={(event) => setExcludeBannedShips(event.target.checked)}
+                                />
+                                <span>{text.excludeBannedShips}</span>
+                            </label>
                             <label className="inline-flex items-center gap-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-2 py-2 text-xs text-slate-700 dark:text-slate-200">
                                 <input
                                     type="checkbox"
