@@ -58,7 +58,7 @@ export interface AddAvailability {
 
 export const SHIP_TYPE_LABELS: Record<ShipType, string> = {
     dd: "DD",
-    cr: "CR",
+    cr: "CA/CL",
     bb: "BB",
     cv: "CV",
     sb: "SB",
@@ -211,10 +211,14 @@ export function getRuleLabel(rule: ShipRule, locale: ShipCheckerLocale = DEFAULT
     }
 
     if (rule.kind === "type") {
+        const labels = rule.targets.map((target) => {
+            const normalized = target.trim().toLowerCase();
+            return normalized in SHIP_TYPE_LABELS ? SHIP_TYPE_LABELS[normalized as ShipType] : target;
+        });
         if (locale === "ja") {
-            return `艦種 (${rule.targets.join(", ")}) <= ${rule.limit}`;
+            return `艦種 (${labels.join(", ")}) <= ${rule.limit}`;
         }
-        return `Ship types (${rule.targets.join(", ")}) <= ${rule.limit}`;
+        return `Ship types (${labels.join(", ")}) <= ${rule.limit}`;
     }
 
     if (rule.kind === "feature") {
