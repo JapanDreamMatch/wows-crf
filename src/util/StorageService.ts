@@ -21,6 +21,14 @@ export class CloudStorageService {
         }
     }
 
+    private buildPublicUrl(objectName: string): string {
+        const encodedPath = objectName
+            .split('/')
+            .map((part) => encodeURIComponent(part))
+            .join('/');
+        return `https://storage.googleapis.com/${this.bucketName}/${encodedPath}`;
+    }
+
     /**
      * 検証済みのチームロゴをアップロードする
      * @param buffer 画像データ（検証済み）
@@ -48,14 +56,48 @@ export class CloudStorageService {
             },
         });
 
-        const encodedPath = objectName
-            .split('/')
-            .map((part) => encodeURIComponent(part))
-            .join('/');
-
         return {
             objectName,
-            url: `https://storage.googleapis.com/${this.bucketName}/${encodedPath}`,
+            url: this.buildPublicUrl(objectName),
+        };
+    }
+
+    /**
+     * 既存のチームロゴを新しいチーム略名のオブジェクトへコピーする
+     * （フォルダ・拡張子・Content-Type 等の既存メタデータを維持し、カスタムメタデータの teamNickName のみ更新）
+     */
+    async copyTeamLogo(
+        srcObjectName: string,
+        newTeamNickName: string
+    ): Promise<{ objectName: string; url: string }> {
+        const lastSlash = srcObjectName.lastIndexOf('/');
+        const dir = lastSlash >= 0 ? srcObjectName.slice(0, lastSlash) : '';
+        const baseName = lastSlash >= 0 ? srcObjectName.slice(lastSlash + 1) : srcObjectName;
+        const lastDot = baseName.lastIndexOf('.');
+        const ext = lastDot > 0 ? baseName.slice(lastDot) : '';
+        const newObjectName = dir ? `${dir}/${newTeamNickName}${ext}` : `${newTeamNickName}${ext}`;
+
+        if (newObjectName === srcObjectName) {
+            return {
+                objectName: srcObjectName,
+                url: this.buildPublicUrl(srcObjectName),
+            };
+        }
+
+        const bucket = this.storage.bucket(this.bucketName);
+        const srcFile = bucket.file(srcObjectName);
+        const destFile = bucket.file(newObjectName);
+
+        await srcFile.copy(destFile);
+        await destFile.setMetadata({
+            cacheControl: 'public, max-age=31536000',
+            contentDisposition: 'inline',
+            metadata: { teamNickName: newTeamNickName },
+        });
+
+        return {
+            objectName: newObjectName,
+            url: this.buildPublicUrl(newObjectName),
         };
     }
 

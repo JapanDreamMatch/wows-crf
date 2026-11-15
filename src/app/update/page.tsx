@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PlayerInput from "@/app/register/components/PlayerInput";
 import TeamLogoInput from "@/app/register/components/TeamLogoInput";
+import TeamNameInput from "@/app/register/components/TeamNameInput";
+import TeamNickNameInput from "@/app/register/components/TeamNickNameInput";
 import ContactInput from "@/app/register/components/ContactInput";
 import CommentInput from "@/app/register/components/CommentInput";
 import type { TeamData } from "@/util/TeamAuth";
@@ -25,6 +27,8 @@ import SubmitProgressBox from "@/components/SubmitProgressBox";
 import { postWithProgress } from "@/util/postWithProgress";
 
 interface UpdateFormValues {
+    teamName: string;
+    teamNickName: string;
     teamLogo?: FileList | File | null;
     contact: string;
     player1: string;
@@ -135,6 +139,8 @@ export default function TeamUpdatePage() {
             setVerifiedPassword(authPassword);
 
             methods.reset({
+                teamName: loaded.teamName ?? "",
+                teamNickName: loaded.teamNickName ?? "",
                 contact: loaded.contact ?? "",
                 comment: loaded.comment ?? "",
                 player1: loaded.players[0] ?? "",
@@ -169,8 +175,14 @@ export default function TeamUpdatePage() {
             logo = data.teamLogo;
         }
 
+        const trimmedTeamName = (data.teamName ?? "").trim();
+        const trimmedNewNickName = (data.teamNickName ?? "").trim();
+        const isNickChanged = trimmedNewNickName !== teamData.teamNickName;
+
         const sendData = new FormData();
         sendData.append("teamNickName", teamData.teamNickName);
+        sendData.append("newTeamNickName", trimmedNewNickName);
+        sendData.append("teamName", trimmedTeamName);
         sendData.append("password", verifiedPassword);
         if (logo) {
             sendData.append("teamLogo", logo);
@@ -197,7 +209,13 @@ export default function TeamUpdatePage() {
                 },
                 "更新に失敗しました。しばらくしてから再度お試しください"
             );
-            router.push("/update/success");
+            if (isNickChanged) {
+                router.push(
+                    `/update/success?nickChanged=1&newNickName=${encodeURIComponent(trimmedNewNickName)}`
+                );
+            } else {
+                router.push("/update/success");
+            }
         } catch (err: any) {
             isSubmittingClickRef.current = false;
             setUpdateError(
@@ -342,41 +360,20 @@ export default function TeamUpdatePage() {
                                     チーム概要
                                 </Heading>
                                 <div className="mx-auto w-4/5">
-                                    {/* チーム名（変更不可） */}
-                                    <Field.Root className="py-4">
-                                        <Box borderWidth="0px" borderRadius="lg" className="p-2 w-full">
-                                            <Field.Label className="pl-2 mb-1">チーム名</Field.Label>
-                                            <Text
-                                                color="red.400"
-                                                fontSize="sm"
-                                                fontWeight="bold"
-                                                className="pl-2 mb-2"
-                                            >
-                                                ※チーム名は変更ができません
-                                            </Text>
-                                            <Input value={teamData.teamName} disabled readOnly />
-                                        </Box>
-                                    </Field.Root>
+                                    {/* チーム名 */}
+                                    <TeamNameInput
+                                        rhfName={"teamName"}
+                                        errorMsg={errors.teamName && errors.teamName.message}
+                                    />
 
-                                    {/* チーム略名（変更不可） */}
-                                    <Field.Root className="py-4">
-                                        <Box borderWidth="0px" borderRadius="lg" className="p-2 w-full">
-                                            <Field.Label className="pl-2 mb-1">チーム略名</Field.Label>
-                                            <Text
-                                                color="red.400"
-                                                fontSize="sm"
-                                                fontWeight="bold"
-                                                className="pl-2 mb-2"
-                                            >
-                                                ※チーム略名は変更ができません
-                                            </Text>
-                                            <Input
-                                                value={teamData.teamNickName}
-                                                disabled
-                                                readOnly
-                                            />
-                                        </Box>
-                                    </Field.Root>
+                                    {/* チーム略名 */}
+                                    <TeamNickNameInput
+                                        key={teamData.teamNickName}
+                                        rhfName={"teamNickName"}
+                                        errorMsg={errors.teamNickName && errors.teamNickName.message}
+                                        currentNickName={teamData.teamNickName}
+                                        noticeText="※チーム略名を変更すると、次回ログイン時は変更後のチーム略名が必要になります"
+                                    />
 
                                     {/* 現在のチームロゴ & ロゴ変更 */}
                                     {teamData.logoUrl && (
