@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateTeamUnlocked, withTeamLock } from "@/util/TeamAuth";
+import type { GoogleSpreadsheetWorksheet } from "google-spreadsheet";
+import { authenticateTeamUnlocked, withTeamLocks } from "@/util/TeamAuth";
 import { CheckTime } from "@/app/api/isApplication/checkTime";
 import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { Player } from "@/util/Player";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
+import { REGISTER_HEADER } from "@/util/SheetHeader";
 import { CloudStorageService } from "@/util/StorageService";
 import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
+import { validateTeamName, validateTeamNickName } from "@/util/TeamValidation";
 
 /**
  * 既存の公開URLからGCSオブジェクト名を抽出する（拡張子変更時の旧ファイル削除用）
@@ -26,6 +29,78 @@ function extractObjectNameFromUrl(url: string): string | null {
     }
 }
 
+/**
+ * API設定シートからロゴ保存先ディレクトリ名を取得する
+ */
+async function resolveLogoDirectory(apiSettingsSheetId: string): Promise<string> {
+    let logoDirectory = "logos";
+    try {
+        const settingsBook = new GoogleSpreadsheetService(apiSettingsSheetId);
+        const logoDirSheet = await settingsBook.getSheet("logo_directory");
+        if (logoDirSheet) {
+            await logoDirSheet.loadCells({
+                startRowIndex: 0,
+                endRowIndex: 2,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+            });
+            const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
+            if (dirVal) {
+                logoDirectory = dirVal;
+            }
+        }
+    } catch (e) {
+        console.warn("Failed to load logo_directory setting, fallback to 'logos':", e);
+    }
+    return logoDirectory;
+}
+
+/**
+ * チームシート新規作成用の行データを組み立てる
+ */
+function buildRecreatedSheetRows(params: {
+    teamNickName: string;
+    teamName: string;
+    teamWinRate: number;
+    contact: string;
+    comment: string;
+    logoUrl: string;
+    salt: string;
+    passwordHash: string;
+    players: Player[];
+}): Record<string, string | number | boolean>[] {
+    const rows: Record<string, string | number | boolean>[] = [
+        {
+            Type: "TeamInfo",
+            IGN: params.teamNickName,
+            ID: params.teamName,
+            WinRate: params.teamWinRate,
+            Contact: params.contact,
+            Comment: params.comment,
+            LogoURL: params.logoUrl,
+            SaltAndHash: params.salt,
+        },
+    ];
+
+    for (let i = 0; i < params.players.length; i++) {
+        const p = params.players[i];
+        const ign = p.getIgn();
+        const row: Record<string, string | number | boolean> = {
+            Type: `player${i + 1}`,
+            IGN: ign,
+            ID: ign ? (p.getUid() ?? "undefined") : "",
+            WinRate: ign ? (p.getWinRate() ?? "undefined") : "",
+        };
+        if (i === 0) {
+            row.SaltAndHash = params.passwordHash; // H3: Hash
+        } else if (i === 1) {
+            row.SaltAndHash = 0; // H4: 失敗回数初期値 0
+        }
+        rows.push(row);
+    }
+    return rows;
+}
+
 export async function POST(req: NextRequest) {
     const isStream = req.headers.get("accept")?.includes("application/x-ndjson");
     const encoder = new TextEncoder();
@@ -34,7 +109,7 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
-            const { API_SETTINGS_SHEET_ID } = process.env;
+            const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
 
             // (1) 早期サイズチェック
             const contentLength = Number(req.headers.get("content-length") ?? 0);
@@ -50,7 +125,26 @@ export async function POST(req: NextRequest) {
             const teamNickName = (
                 (formData.get("teamNickName") ?? formData.get("teamNickname") ?? "") as string
             ).trim();
+            const rawNewNickName = formData.get("newTeamNickName");
+            const newTeamNickName =
+                typeof rawNewNickName === "string" && rawNewNickName.trim() !== ""
+                    ? rawNewNickName.trim()
+                    : typeof rawNewNickName === "string"
+                        ? ""
+                        : teamNickName;
+            const rawTeamName = formData.get("teamName");
+            const teamName = typeof rawTeamName === "string" ? rawTeamName.trim() : "";
             const password = (formData.get("password") ?? "") as string;
+
+            // チーム名・チーム略名のバリデーション
+            const teamNameErr = validateTeamName(teamName);
+            if (teamNameErr) {
+                return { status: 400, body: { message: teamNameErr } };
+            }
+            const newNickErr = validateTeamNickName(newTeamNickName);
+            if (newNickErr) {
+                return { status: 400, body: { message: newNickErr } };
+            }
 
             // (2) 画像検証
             const logos = formData
@@ -81,8 +175,8 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            // 同一チームの同時リクエスト排他ロック内で認証・更新を実行
-            const lockedExec = await withTeamLock(teamNickName, async () => {
+            // 同一チーム（略名変更時は旧・新両方）の同時リクエスト排他ロック内で認証・更新を実行
+            const lockedExec = await withTeamLocks([teamNickName, newTeamNickName], async () => {
                 sendProgress?.("チーム情報の確認", 5);
 
                 // (3) 認証 & シート取得
@@ -102,6 +196,23 @@ export async function POST(req: NextRequest) {
                         status: 503,
                         body: { message: "現在は変更受付期間ではありません" },
                     };
+                }
+
+                const isNickChanged = newTeamNickName !== auth.teamData.teamNickName;
+                const spreadSheet = isNickChanged
+                    ? new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "")
+                    : null;
+
+                // 略名変更時は新しい略名の重複チェックを Player API 呼び出し前に実施
+                if (isNickChanged && spreadSheet) {
+                    const sheetNames = await spreadSheet.getSheetNames();
+                    const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
+                    if (validSheetNames.includes(newTeamNickName)) {
+                        return {
+                            status: 409,
+                            body: { message: "このチーム略名は既に登録されています" },
+                        };
+                    }
                 }
 
                 const contact = (formData.get("contact") ?? "") as string;
@@ -138,82 +249,106 @@ export async function POST(req: NextRequest) {
                           teamMemberWinRate.length
                         : 0;
 
-                // (6) ロゴアップロード（添付がある場合のみ）
+                // (6) ロゴ処理（新規アップロード、または略名変更に伴う既存ロゴのコピー）
                 const storage = new CloudStorageService();
-                let uploaded: { objectName: string; url: string } | null = null;
+                let logoResult: { objectName: string; url: string } | null = null;
                 const prevLogoUrl = auth.teamData.logoUrl;
                 const prevObjectName = extractObjectNameFromUrl(prevLogoUrl);
 
                 if (logoBuffer && logoType) {
                     sendProgress?.("画像のアップロード", 82);
-                    let logoDirectory = "logos";
-                    try {
-                        const settingsBook = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
-                        const logoDirSheet = await settingsBook.getSheet("logo_directory");
-                        if (logoDirSheet) {
-                            await logoDirSheet.loadCells({
-                                startRowIndex: 0,
-                                endRowIndex: 2,
-                                startColumnIndex: 0,
-                                endColumnIndex: 1,
-                            });
-                            const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
-                            if (dirVal) {
-                                logoDirectory = dirVal;
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("Failed to load logo_directory setting, fallback to 'logos':", e);
-                    }
-
-                    uploaded = await storage.uploadTeamLogo(
+                    const logoDirectory = await resolveLogoDirectory(API_SETTINGS_SHEET_ID ?? "");
+                    logoResult = await storage.uploadTeamLogo(
                         logoBuffer,
                         logoType,
-                        auth.teamData.teamNickName,
+                        newTeamNickName,
                         logoDirectory
                     );
+                } else if (isNickChanged && prevObjectName) {
+                    sendProgress?.("画像の移行", 82);
+                    logoResult = await storage.copyTeamLogo(prevObjectName, newTeamNickName);
                 }
+
+                const createdNewLogo = Boolean(
+                    logoResult && (!prevObjectName || prevObjectName !== logoResult.objectName)
+                );
+                let createdSheet: GoogleSpreadsheetWorksheet | null = null;
 
                 try {
                     sendProgress?.("登録情報の書き込み", 92);
-                    const { sheet } = auth;
 
-                    // Row 2 (index 1: TeamInfo) の更新
-                    // B2 (teamNickName), C2 (teamName), H列 (Salt/Hash/Lock) は絶対に変更しない
-                    sheet.getCell(1, 3).value = teamWinRate; // D2: WinRate
-                    sheet.getCell(1, 4).value = contact;     // E2: Contact
-                    sheet.getCell(1, 5).value = comment;     // F2: Comment
-                    if (uploaded) {
-                        sheet.getCell(1, 6).value = `${uploaded.url}?v=${Date.now()}`; // G2: LogoURL
+                    if (!isNickChanged) {
+                        const { sheet } = auth;
+                        // Row 2 (index 1: TeamInfo) の更新（B2 チーム略名・H列 Salt/Hash/Lock は維持）
+                        sheet.getCell(1, 2).value = teamName;    // C2: チーム名
+                        sheet.getCell(1, 3).value = teamWinRate; // D2: WinRate
+                        sheet.getCell(1, 4).value = contact;     // E2: Contact
+                        sheet.getCell(1, 5).value = comment;     // F2: Comment
+                        if (logoResult) {
+                            sheet.getCell(1, 6).value = `${logoResult.url}?v=${Date.now()}`; // G2: LogoURL
+                        }
+
+                        // Row 3〜12 (index 2〜11: player1〜player10) の更新
+                        for (let i = 0; i < 10; i++) {
+                            const rowIndex = 2 + i;
+                            const p = players[i];
+                            const ign = p.getIgn();
+                            sheet.getCell(rowIndex, 0).value = `player${i + 1}`;
+                            sheet.getCell(rowIndex, 1).value = ign;
+                            sheet.getCell(rowIndex, 2).value = ign ? (p.getUid() ?? "undefined") : "";
+                            sheet.getCell(rowIndex, 3).value = ign ? (p.getWinRate() ?? "undefined") : "";
+                        }
+
+                        await sheet.saveUpdatedCells();
+                    } else if (spreadSheet) {
+                        // 略名変更時: ① 新シート作成＆書き込み → ② 旧シート削除
+                        const nextLogoUrl = logoResult
+                            ? `${logoResult.url}?v=${Date.now()}`
+                            : prevLogoUrl;
+                        const sheetRows = buildRecreatedSheetRows({
+                            teamNickName: newTeamNickName,
+                            teamName,
+                            teamWinRate,
+                            contact,
+                            comment,
+                            logoUrl: nextLogoUrl,
+                            salt: auth.salt,
+                            passwordHash: auth.passwordHash,
+                            players,
+                        });
+
+                        createdSheet = await spreadSheet.addSheet(newTeamNickName, REGISTER_HEADER);
+                        await createdSheet.addRows(sheetRows);
+                        await auth.sheet.delete();
                     }
 
-                    // Row 3〜12 (index 2〜11: player1〜player10) の更新
-                    for (let i = 0; i < 10; i++) {
-                        const rowIndex = 2 + i;
-                        const p = players[i];
-                        const ign = p.getIgn();
-                        sheet.getCell(rowIndex, 0).value = `player${i + 1}`;
-                        sheet.getCell(rowIndex, 1).value = ign;
-                        sheet.getCell(rowIndex, 2).value = ign ? (p.getUid() ?? "undefined") : "";
-                        sheet.getCell(rowIndex, 3).value = ign ? (p.getWinRate() ?? "undefined") : "";
-                    }
-
-                    await sheet.saveUpdatedCells();
-
-                    // 拡張子変更等でオブジェクト名が変わった場合、旧ロゴオブジェクトを削除
-                    if (uploaded && prevObjectName && prevObjectName !== uploaded.objectName) {
+                    // 略名変更や拡張子変更等で旧ロゴと別オブジェクトになった場合、旧ロゴを削除
+                    if (logoResult && prevObjectName && prevObjectName !== logoResult.objectName) {
                         await storage.deleteObject(prevObjectName);
                     }
                 } catch (e) {
-                    // 新規オブジェクトを作成していた場合はロールバック削除
-                    if (uploaded && (!prevObjectName || prevObjectName !== uploaded.objectName)) {
-                        await storage.deleteObject(uploaded.objectName);
+                    if (createdSheet) {
+                        try {
+                            await createdSheet.delete();
+                        } catch (rollbackErr) {
+                            console.error("failed to rollback recreated sheet:", newTeamNickName, rollbackErr);
+                        }
+                    }
+                    if (createdNewLogo && logoResult) {
+                        await storage.deleteObject(logoResult.objectName);
                     }
                     throw e;
                 }
 
                 sendProgress?.("更新完了", 100);
-                return { status: 200, body: { message: "ok" } };
+                return {
+                    status: 200,
+                    body: {
+                        message: "ok",
+                        nickChanged: isNickChanged,
+                        teamNickName: newTeamNickName,
+                    },
+                };
             });
 
             if (lockedExec.locked) {

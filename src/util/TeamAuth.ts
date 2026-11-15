@@ -21,6 +21,8 @@ export type AuthResult =
           status: 200;
           sheet: GoogleSpreadsheetWorksheet;
           teamData: TeamData;
+          salt: string;
+          passwordHash: string;
       }
     | {
           ok: false;
@@ -37,23 +39,40 @@ const processingTeams =
     (globalForAuth.__wowsCrfProcessingTeams = new Set<string>());
 
 /**
+ * 複数チームキーに対する認証・更新処理を排他実行するラッパー（デッドロック防止のため辞書順処理）
+ */
+export async function withTeamLocks<T>(
+    teamNickNames: string[],
+    fn: () => Promise<T>
+): Promise<{ locked: true } | { locked: false; result: T }> {
+    const keys = Array.from(
+        new Set(teamNickNames.map((name) => name.trim()).filter(Boolean))
+    ).sort();
+
+    if (keys.some((key) => processingTeams.has(key))) {
+        return { locked: true };
+    }
+    for (const key of keys) {
+        processingTeams.add(key);
+    }
+    try {
+        const result = await fn();
+        return { locked: false, result };
+    } finally {
+        for (const key of keys) {
+            processingTeams.delete(key);
+        }
+    }
+}
+
+/**
  * 同一チームに対する認証・更新処理を排他実行するラッパー
  */
 export async function withTeamLock<T>(
     teamNickName: string,
     fn: () => Promise<T>
 ): Promise<{ locked: true } | { locked: false; result: T }> {
-    const key = teamNickName.trim();
-    if (processingTeams.has(key)) {
-        return { locked: true };
-    }
-    processingTeams.add(key);
-    try {
-        const result = await fn();
-        return { locked: false, result };
-    } finally {
-        processingTeams.delete(key);
-    }
+    return withTeamLocks([teamNickName], fn);
 }
 
 /**
@@ -230,6 +249,8 @@ export async function authenticateTeamUnlocked(
         status: 200,
         sheet,
         teamData,
+        salt,
+        passwordHash: storedHash,
     };
 }
 
