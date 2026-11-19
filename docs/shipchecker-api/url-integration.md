@@ -22,7 +22,7 @@ https://form.japandreammatch.info/shipchecker?ships=Des%20Moines,Minotaur,Minota
 | パラメータ | 必須/任意 | 説明 |
 |---|---|---|
 | `ships` | 任意 | 初期選択する艦艇名のリスト。カンマ（`,`）区切り、または `?ships=A&ships=B` のように同名パラメータを複数指定可能。 |
-| `radar` | 任意 | `hasRader === "Optional"` の艦を「実際にレーダーを使用する艦艇（`allRader` ルール対象）」としてカウントするための艦艇名リスト。カンマ区切り・複数指定に対応。 |
+| `radar` | 任意 | `hasRadar === "Optional"` の艦を「実際にレーダーを使用する艦艇（`allRadar` ルール対象）」としてカウントするための艦艇名リスト。カンマ区切り・複数指定に対応。 |
 
 - **URL エンコード**: スペースや日本語を含む艦名は `encodeURIComponent`（または `URLSearchParams`）でエンコードしてください。
 - **区切り文字**: カンマ（`,`）で分割し、各要素の前後の空白を除去して空要素を除外します。
@@ -53,11 +53,11 @@ https://form.japandreammatch.info/shipchecker?ships=Des%20Moines,Minotaur,Minota
 ## `radar` パラメータの適用ルール
 
 - `radar` の各艦名も上記と同じロジックで艦艇を解決します。
-- 選択済み艦（`ships`）の先頭から走査し、**`hasRader === "Optional"` の艦に対して出現回数ベースでレーダー使用（チェックボックス ON）を割り当てます**。
+- 選択済み艦（`ships`）の先頭から走査し、**`hasRadar === "Optional"` の艦に対して出現回数ベースでレーダー使用（チェックボックス ON）を割り当てます**。
   - 例1: `ships=Minotaur,Minotaur&radar=Minotaur` → 1隻目の `Minotaur` のみレーダー使用 ON、2隻目は OFF
   - 例2: `ships=Minotaur,Minotaur&radar=Minotaur,Minotaur` → 2隻ともレーダー使用 ON
 - **`Default` 艦 / `No` 艦の扱い**:
-  - `ships` に含まれている `hasRader === "Default"` 艦（例: `Des Moines`）や `"No"` 艦が `radar` に含まれていても、エラーや警告は表示せず無視します（`Default` 艦は仕様上もともと `allRader` としてカウントされます）。
+  - `ships` に含まれている `hasRadar === "Default"` 艦（例: `Des Moines`）や `"No"` 艦が `radar` に含まれていても、エラーや警告は表示せず無視します（`Default` 艦は仕様上もともと `allRadar` としてカウントされます）。
 - **警告対象**:
   - マスター一覧に存在しない艦名（typo 等）、または `ships` に含まれていない艦名が `radar` に指定された場合は、適用漏れ防止のため警告バナーに艦名を表示します（`ships` 未指定で `?radar=...` のみ渡された場合も警告対象です）。
 

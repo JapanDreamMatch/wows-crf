@@ -57,28 +57,28 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
   "countries": ["usa", "japan", "uk", "ussr", "germany", "france"],
   "ships": [
     {
-      "id": "cr-0-des-moines",
-      "type": "cr",
+      "id": "ca-cl-0-des-moines",
+      "type": "ca-cl",
       "rawName": "Des Moines, デモイン",
       "displayName": "Des Moines",
       "aliases": ["Des Moines", "デモイン"],
       "country": "usa",
       "tier": 10,
-      "hasRader": "Default",
+      "hasRadar": "Default",
       "hasAircraft": false,
       "isBan": false,
       "addDate": "2024-09-01",
       "model": ""
     },
     {
-      "id": "cr-1-minotaur",
-      "type": "cr",
+      "id": "ca-cl-1-minotaur",
+      "type": "ca-cl",
       "rawName": "Minotaur, マイノーター",
       "displayName": "Minotaur",
       "aliases": ["Minotaur", "マイノーター"],
       "country": "uk",
       "tier": 10,
-      "hasRader": "Optional",
+      "hasRadar": "Optional",
       "hasAircraft": false,
       "isBan": false,
       "addDate": "",
@@ -98,9 +98,9 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
       {
         "id": "rule-2",
         "kind": "special",
-        "targets": ["allRader"],
+        "targets": ["allRadar"],
         "limit": 3,
-        "raw": "allRader,3"
+        "raw": "allRadar,3"
       }
     ]
   },
@@ -114,7 +114,7 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
 |---|---|---|
 | `version` | `string` | シートの `version` タブ A1 セルの値（未設定時は `""`） |
 | `countries` | `string[]` | 国家識別子の一覧 |
-| `ships` | `ShipData[]` | 艦艇一覧（`dd` → `cr` → `bb` → `cv` → `sb` の順、同艦種内は `displayName` 英語ロケール昇順） |
+| `ships` | `ShipData[]` | 艦艇一覧（`dd` → `ca-cl` → `bb` → `cv` → `sb` の順、同艦種内は `displayName` 英語ロケール昇順） |
 | `rules` | `ShipRuleSet` | 編成隻数上限およびルール一覧 |
 | `fetchedAt` | `string` | スプレッドシートからの取得時刻（ISO 8601 UTC） |
 
@@ -123,13 +123,13 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `id` | `string` | `{type}-{rowIndex}-{slug}` 形式の識別子（シート行変更で変わりうるため、外部保存時は `displayName` の併用を推奨） |
-| `type` | `"dd" \| "cr" \| "bb" \| "cv" \| "sb"` | 艦種コード（`dd`: 駆逐, `cr`: 巡洋, `bb`: 戦艦, `cv`: 空母, `sb`: 潜水艦） |
+| `type` | `"dd" \| "ca-cl" \| "bb" \| "cv" \| "sb"` | 艦種コード（`dd`: 駆逐, `ca-cl`: 巡洋, `bb`: 戦艦, `cv`: 空母, `sb`: 潜水艦） |
 | `rawName` | `string` | シートの `name` 列の生文字列 |
 | `displayName` | `string` | 表示用の代表艦名（`aliases[0]`） |
 | `aliases` | `string[]` | `rawName` を `,` 分割した別名リスト（英名・日本語名など） |
 | `country` | `string` | 国家名 |
 | `tier` | `number \| null` | Tier（数値変換できない場合は `null`） |
-| `hasRader` | `"Default" \| "Optional" \| "No"` | レーダー搭載区分（`Default`: 固定/標準、 `Optional`: 選択可能、 `No`: なし）※スペル注意 |
+| `hasRadar` | `"Default" \| "Optional" \| "No"` | レーダー搭載区分（`Default`: 固定/標準、 `Optional`: 選択可能、 `No`: なし） |
 | `hasAircraft` | `boolean` | 操作可能な航空機を持つ艦艇かどうか |
 | `isBan` | `boolean` | シート上で使用禁止（BAN）に指定されているか |
 | `addDate` | `string` | シートの `addDate` 列の値 |
@@ -163,10 +163,10 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
    - `kind === "country"`: `ship.country` が `targets` に一致する艦。
    - `kind === "type"`: `ship.type` が `targets` に一致する艦。
    - `kind === "feature"`:
-     - `"hasrader"`: `ship.hasRader === "Default" || ship.hasRader === "Optional"`
+     - `"hasradar"`: `ship.hasRadar === "Default" || ship.hasRadar === "Optional"`
      - `"hasaircraft"`: `ship.hasAircraft === true`
    - `kind === "special"`:
-     - `"allrader"`: `ship.hasRader === "Default" || (ship.hasRader === "Optional" && useOptionalRadar === true)`
+     - `"allradar"`: `ship.hasRadar === "Default" || (ship.hasRadar === "Optional" && useOptionalRadar === true)`
      - `"tier11"`: `ship.tier === 11`
 
 > [!NOTE]
@@ -192,13 +192,13 @@ Google SpreadSheet への過剰なアクセスを防ぐため、サーバー側�
 ```typescript
 export interface ShipData {
     id: string;
-    type: "dd" | "cr" | "bb" | "cv" | "sb";
+    type: "dd" | "ca-cl" | "bb" | "cv" | "sb";
     rawName: string;
     displayName: string;
     aliases: string[];
     country: string;
     tier: number | null;
-    hasRader: "Default" | "Optional" | "No";
+    hasRadar: "Default" | "Optional" | "No";
     hasAircraft: boolean;
     isBan: boolean;
     addDate: string;

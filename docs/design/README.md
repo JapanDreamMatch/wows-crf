@@ -49,7 +49,7 @@
 ### 原則② Contract-Explicit（インターフェースとシート座標の厳密な契約）
 - 曖昧な自然言語（「シートに保存する」「エラーを返す」等）を避け、**表（Markdown Table）と TypeScript 型定義**で契約を記述します。
 - スプレッドシートを操作する場合は、**シート名・行番号・列アルファベット（例: `G2 = LogoURL`, `H2 = Salt`, `H3 = Hash`, `H4 = 失敗回数 / Lock`, `H5 = ロック解除時刻`）** を明記します。
-- 既存の外部互換性（例: `hasRader` / `allRader` のスペル維持、`@` を含むシート名のチーム数カウント除外）を壊さないことを明示します。
+- 既存の外部互換性（例: `/api/shipchecker` のレスポンススキーマ（`hasRadar` / `allRadar` / `ca-cl` 等）の維持、`@` を含むシート名のチーム数カウント除外）を壊さないことを明示します。
 
 ### 原則③ Security-By-Design & Pure Logic Separation（安全設計と純粋ロジック分離）
 - **純粋関数（`src/util/*.ts`）と外部 I/O（`src/app/api/**/route.ts`, Google Sheets, GCS, Wargaming API）を分離**する設計にします。これにより、外部 API を叩かずにミリ秒単位で実行できる単体テスト（PR 自動テスト）が可能になります。

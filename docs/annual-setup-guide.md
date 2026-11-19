@@ -100,10 +100,10 @@ flowchart TD
    - 名前例: `JDM_艦艇ルール_202X`
 2. **各シート（タブ）の確認・更新**:
    - `country`: 国家一覧（A列）
-   - 艦種別シート（`bb`, `cr`, `dd`, `cv`, `ss` 等）:
-     - 参戦可能艦艇の追加・削除、Tier、レーダー有無（`Default`/`Optional`/`No`）、空母/航空機有無、BAN指定（`isBan`）の更新
+   - 艦種別シート（`dd`, `ca-cl`, `bb`, `cv`, `sb`）:
+     - 参戦可能艦艇の追加・削除、Tier、レーダー有無（`hasRadar` 列: `Default`/`Optional`/`No`）、空母/航空機有無（`hasAircraft`）、BAN指定（`isBan`）の更新
    - `rules`:
-     - チーム隻数（`shipAmount`）、同型艦制限、ポイント制限等のレギュレーション設定
+     - チーム隻数（`shipAmount`）、レーダー制限（`allRadar` / `hasRadar`）、艦種制限（`dd`, `ca-cl`, `bb`, `cv`, `sb`）、同型艦制限等のレギュレーション設定
 3. **URLからスプレッドシートIDをコピー**
 
 ---
@@ -261,7 +261,7 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 - Cloud Runのログ（Cloud Logging）を確認し、詳細なエラーメッセージを追跡してください。
 
 ### Q. 艦艇チェッカーで艦艇データが読み込めない
-- `SHIP_AND_RULES_SHEET_ID` のスプレッドシート名・シート名（`country`, `bb`, `cr`, `rules` など半角小文字）が正しく存在しているか確認してください。
+- `SHIP_AND_RULES_SHEET_ID` のスプレッドシート名・シート名（`country`, `dd`, `ca-cl`, `bb`, `cv`, `sb`, `rules` など半角小文字）が正しく存在しているか確認してください。
 
 ---
 

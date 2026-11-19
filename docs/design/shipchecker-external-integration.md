@@ -16,7 +16,7 @@
 - **現行 API（`src/app/api/shipchecker/route.ts`）の課題**:
   - `export const dynamic = "force-dynamic"` かつキャッシュ機構が存在しないため、1アクセスのたびに Google SpreadSheet へ毎回通信が発生する。
   - `GET()` 内で `spreadSheet.getSheetNames()`（内部で `doc.loadInfo()`）を実行した後、`loadVersion()`・`loadCountryList()`・`loadRules()` が毎回 `spreadSheet.getSheet()`（内部で再び `doc.loadInfo()`）を呼んでいるため、**1リクエスト内で `doc.loadInfo()` が4回重複実行**されている。
-  - これに加え、`version` / `country` / `rules` への `loadCells()`（計3回）と `SHIP_TYPES`（`dd`, `cr`, `bb`, `cv`, `sb`）5シートへの `getRows()`（ヘッダー行・データ行の取得を含め最大10回）が走り、**1リクエストあたり12〜17回前後の Google Sheets API 読み取り**が発生している。
+  - これに加え、`version` / `country` / `rules` への `loadCells()`（計3回）と `SHIP_TYPES`（`dd`, `ca-cl`, `bb`, `cv`, `sb`）5シートへの `getRows()`（ヘッダー行・データ行の取得を含め最大10回）が走り、**1リクエストあたり12〜17回前後の Google Sheets API 読み取り**が発生している。
   - Google Sheets API の読み取り上限（サービスアカウントあたり 60 requests / 分、プロジェクトあたり 300 requests / 分）を考慮すると、外部サイトからの利用増加時に 429 Quota Exceeded が発生するリスクが高い。
 - **URL クエリ初期選択（(2) 案）の特性**:
   - `/shipchecker` 画面（`src/app/shipchecker/components/ShipCheckerClient.tsx`）は、もともと初期表示時に `/api/shipchecker` を1回呼び出して艦艇・ルール一覧を取得する構成となっている。
@@ -74,13 +74,13 @@ interface ShipCheckerApiResponse {
 | 型 | フィールド | 型定義 | 備考 |
 |---|---|---|---|
 | `ShipData` | `id` | `string` | `{type}-{index}-{slug}` |
-| `ShipData` | `type` | `"dd" \| "cr" \| "bb" \| "cv" \| "sb"` | 艦種コード |
+| `ShipData` | `type` | `"dd" \| "ca-cl" \| "bb" \| "cv" \| "sb"` | 艦種コード |
 | `ShipData` | `rawName` | `string` | シート `name` 列の生文字列 |
 | `ShipData` | `displayName` | `string` | 表示用艦名（`aliases[0]`） |
 | `ShipData` | `aliases` | `string[]` | カンマ区切りの別名リスト |
 | `ShipData` | `country` | `string` | 国家名 |
 | `ShipData` | `tier` | `number \| null` | Tier（数値変換不可時は `null`） |
-| `ShipData` | `hasRader` | `"Default" \| "Optional" \| "No"` | 既存スペル `hasRader` を互換維持 |
+| `ShipData` | `hasRadar` | `"Default" \| "Optional" \| "No"` | レーダー搭載区分 |
 | `ShipData` | `hasAircraft` | `boolean` | 航空機保有有無 |
 | `ShipData` | `isBan` | `boolean` | シート BAN 指定有無 |
 | `ShipData` | `addDate` | `string` | 追加日 |
@@ -89,7 +89,7 @@ interface ShipCheckerApiResponse {
 | `ShipRuleSet` | `rules` | `ShipRule[]` | `{ id, kind, targets, limit, raw }[]` |
 
 > [!NOTE]
-> - 既存のスペルである `hasRader`（プロパティ名）および `allRader`（特殊ルール名）は、既存フロントエンドおよび外部ツールの互換性を維持するため変更しません。
+> - スキーマ内のプロパティ名・識別子は `hasRadar` / `allRadar` および艦種コード `dd` / `ca-cl` / `bb` / `cv` / `sb` を使用します。
 > - キャッシュヒット時、レスポンス内の `fetchedAt` は「キャッシュが生成（Sheets から取得）された時刻」が返却されます。
 > - `500` エラー時はスプレッドシート ID や Google API の生エラーメッセージをクライアントへ返却せず、`{ message: "Failed to load shipchecker data." }` のみを返し、詳細スタックトレースはサーバーログ（`console.error`）のみへ記録します。
 
@@ -102,7 +102,7 @@ interface ShipCheckerApiResponse {
 | **URL 形式** | `/shipchecker?ships=<艦名1>,<艦名2>,...&radar=<艦名A>,<艦名B>,...` | 例: `/shipchecker?ships=Des%20Moines,Shimakaze&radar=Des%20Moines` |
 | **パラメータ取得方法** | カンマ区切り（`?ships=A,B`）および同名パラメータ複数指定（`?ships=A&ships=B`）の両方に対応 | `searchParams.getAll("ships")` / `searchParams.getAll("radar")` を `,` で分割し前後空白トリム・空要素除去 |
 | **艦名照合ルール** | NFKC 正規化・連続空白の半角スペース1つへの圧縮・小文字化による完全一致＋アクセント記号・特殊文字正規化フォールバック | 優先順位: **1. `displayName` 正規化一致 → 2. `aliases` 正規化一致 → 3. `displayName` アクセント/特殊文字除去一致 → 4. `aliases` アクセント/特殊文字除去一致**（例: `Kléber` / `Kleber`, `Gdańsk` / `Gdansk`, `Preußen` / `Preussen`, `Błyskawica` / `Blyskawica` 等の揺れを吸収）。同一優先順位で複数一致した場合は `ships` 配列の先頭を採用。**`model`（派生元のモデル艦）は別艦艇誤爆防止のため照合対象外とする** |
-| **`radar` 適用ルール** | `radar` も同様に `ship.id` へ解決し、**出現回数ベース**で `hasRader === "Optional"` の選択艦へ先頭から順に `useOptionalRadar: true` を設定 | 例: `ships=Minotaur,Minotaur&radar=Minotaur` → 1隻目のみ ON / `radar=Minotaur,Minotaur` → 2隻とも ON。選択済みの `Default` 艦や `No` 艦が `radar` に含まれていても警告せず無視する。一方、**マスター一覧に存在しない未知の艦名（typo 等）や `ships` で選択されていない艦名が `radar` に指定された場合は、`allRader` 判定漏れを防ぐため警告バナーで通知する** |
+| **`radar` 適用ルール** | `radar` も同様に `ship.id` へ解決し、**出現回数ベース**で `hasRadar === "Optional"` の選択艦へ先頭から順に `useOptionalRadar: true` を設定 | 例: `ships=Minotaur,Minotaur&radar=Minotaur` → 1隻目のみ ON / `radar=Minotaur,Minotaur` → 2隻とも ON。選択済みの `Default` 艦や `No` 艦が `radar` に含まれていても警告せず無視する。一方、**マスター一覧に存在しない未知の艦名（typo 等）や `ships` で選択されていない艦名が `radar` に指定された場合は、`allRadar` 判定漏れを防ぐため警告バナーで通知する** |
 | **BAN艦・ルール違反艦** | **そのまま選択状態に読み込む（左ペインにも「シートBAN」バッジを表示）** | 外部ツールで作成した編成の「規約違反の有無」をチェッカー画面で確認することが主目的のため、シート BAN 艦や隻数超過・ルール違反艦もスキップせず `selectedEntries` に追加し、既存の `evaluateShipRules` による違反表示で見せる。また、選択された艦のうちどれがシート BAN 艦か一目で判別できるよう、左ペインの「選択済み艦艇」カードにも `シートBAN` / `Sheet BAN` バッジを表示する |
 | **未解決艦名の扱い** | スキップし、閉じる可能な警告バナーを表示（JA/EN 対応） | `ships` の未解決艦名、および `radar` の未解決・未選択艦名があっても他の有効な艦はすべて読み込み、該当した艦名のみを警告通知する（XSS 防止のため React のテキストノードで描画） |
 | **読み込み上限** | `MAX_URL_SHIPS = 30` | 異常に巨大な URL による UI フリーズ防止。31件目以降は無視し、警告バナーで切り捨て件数を通知 |
@@ -628,7 +628,7 @@ export function parseInitialSelectionFromParams(
         }
 
         let useOptionalRadar = false;
-        if (matchedShip.hasRader === "Optional") {
+        if (matchedShip.hasRadar === "Optional") {
             const remaining = radarCountByShipId.get(matchedShip.id) ?? 0;
             if (remaining > 0) {
                 useOptionalRadar = true;
@@ -797,11 +797,11 @@ useEffect(() => {
    - URL: `GET https://form.japandreammatch.info/api/shipchecker`
    - `Access-Control-Allow-Origin: *`（および `Access-Control-Expose-Headers: X-Cache`）を返却します（ブラウザから直接 `fetch` 可能）。
    - サーバーおよびブラウザで **最大5分（300秒）のキャッシュ** が効くため、スプレッドシート更新直後は数分間旧データが返る場合があります。
-   - **フィールド名に関する注意**: JSON 内のプロパティ名 `hasRader` および特殊ルール `allRader` は、既存システム互換のため `Rader` のスペルそのままとなっています。
+   - **フィールド名・識別子**: JSON 内のプロパティ名 `hasRadar`、特殊ルール `allRadar`、および巡洋艦コード `ca-cl` を使用します。
 2. **URL クエリ連携**
    - URL 形式: `https://form.japandreammatch.info/shipchecker?ships=<艦名1>,<艦名2>&radar=<艦名1>`
    - カンマ区切り（URL エンコード必須。例: `Des%20Moines`）で複数指定でき、大文字・小文字・全半角・連続スペース・アクセント記号や特殊文字の表記揺れ（例: `Kléber` / `Kleber`, `Preußen` / `Preussen`, `Błyskawica` / `Blyskawica`）を問わず表示名（`displayName`）または別名（`aliases`）で一致させます（`model` 欄では一致させません）。
-   - `radar` は `hasRader === "Optional"` の艦に対して、登場回数ベースで先頭の該当艦から順にレーダー使用 ON にします（例: 同型艦2隻のうち1隻だけレーダー使用なら `radar=艦名` を1回だけ指定）。
+   - `radar` は `hasRadar === "Optional"` の艦に対して、登場回数ベースで先頭の該当艦から順にレーダー使用 ON にします（例: 同型艦2隻のうち1隻だけレーダー使用なら `radar=艦名` を1回だけ指定）。
    - シート上で BAN されている艦やルール違反の組み合わせも比較確認のためそのまま読み込まれ、選択済み艦カードの「シートBAN」バッジおよび画面下のルールチェック欄に違反が表示されます。
    - `ships` や `radar` に存在しない艦名（または `ships` に含まれない `radar` 指定艦）がある場合はスキップして画面上部に警告を表示します。1度に読み込める上限は30隻です。
 

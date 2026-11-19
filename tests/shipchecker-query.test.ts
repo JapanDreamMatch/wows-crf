@@ -10,28 +10,28 @@ import {
 
 const MOCK_SHIPS: ShipData[] = [
     {
-        id: "cr-0-des-moines",
-        type: "cr",
+        id: "ca-cl-0-des-moines",
+        type: "ca-cl",
         rawName: "Des Moines",
         displayName: "Des Moines",
         aliases: ["Des Moines", "DM"],
         country: "U.S.A.",
         tier: 10,
-        hasRader: "Default",
+        hasRadar: "Default",
         hasAircraft: false,
         isBan: false,
         addDate: "",
         model: "Des Moines",
     },
     {
-        id: "cr-1-minotaur",
-        type: "cr",
+        id: "ca-cl-1-minotaur",
+        type: "ca-cl",
         rawName: "Minotaur",
         displayName: "Minotaur",
         aliases: ["Minotaur"],
         country: "U.K.",
         tier: 10,
-        hasRader: "Optional",
+        hasRadar: "Optional",
         hasAircraft: false,
         isBan: false,
         addDate: "",
@@ -45,7 +45,7 @@ const MOCK_SHIPS: ShipData[] = [
         aliases: ["Kléber", "Kleber"],
         country: "France",
         tier: 10,
-        hasRader: "No",
+        hasRadar: "No",
         hasAircraft: false,
         isBan: true,
         addDate: "",
@@ -59,7 +59,7 @@ const MOCK_SHIPS: ShipData[] = [
         aliases: ["Preußen"],
         country: "Germany",
         tier: 10,
-        hasRader: "No",
+        hasRadar: "No",
         hasAircraft: false,
         isBan: false,
         addDate: "",
@@ -89,8 +89,8 @@ describe("ShipCheckerQuery", () => {
     });
 
     it("resolves ships by displayName, alias, or stripped diacritics, but never by model", () => {
-        expect(resolveShipByName("des moines", MOCK_SHIPS)?.id).toBe("cr-0-des-moines");
-        expect(resolveShipByName("DM", MOCK_SHIPS)?.id).toBe("cr-0-des-moines");
+        expect(resolveShipByName("des moines", MOCK_SHIPS)?.id).toBe("ca-cl-0-des-moines");
+        expect(resolveShipByName("DM", MOCK_SHIPS)?.id).toBe("ca-cl-0-des-moines");
         expect(resolveShipByName("Preussen", MOCK_SHIPS)?.id).toBe("bb-3-preussen");
         // Model name ('Großer Kurfürst') must NOT match Preußen to prevent false positives
         expect(resolveShipByName("Großer Kurfürst", MOCK_SHIPS)).toBeNull();

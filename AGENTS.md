@@ -93,8 +93,8 @@ wows-crf/
    - `Row 3 (player1)`: `H3`=Argon2id Hash(64hex)。
    - `Row 4 (player2)`: `H4`=認証失敗回数または `"Lock"`。
    - `Row 5 (player3)`: `H5`=ロック解除時刻（ISO 8601）。
-3. **外部公開スキーマのスペル維持 (`hasRader` / `allRader`)**:
-   - `src/util/ShipCheckRules.ts` および `GET /api/shipchecker` の `hasRader`（プロパティ名）と `allRader`（特殊ルール識別子）は、外部連携ツールとの後方互換性のため **意図的に `Rader` のスペルを維持** しています。「タイポ修正」として `hasRadar` 等にリネームしないでください。
+3. **外部公開スキーマ・シート契約の維持 (`hasRadar` / `allRadar` / 艦種コード)**:
+   - `src/util/ShipCheckRules.ts` および `GET /api/shipchecker` の `hasRadar`（プロパティ名・シート列名）、`allRadar`（特殊ルール識別子）、艦種コード `SHIP_TYPES`（`dd`, `ca-cl`, `bb`, `cv`, `sb`）は、`SHIP_AND_RULES_SHEET_ID` のシート構成および外部連携ツールとの公開契約であるため、無断で変更しないでください。
 4. **React Hook Form バリデーション方針**:
    - `RegisterForm` では各入力コンポーネント内の `register(rhfName, { validate, ... })` でバリデーションを定義しています。`useForm` に `yupResolver` を接続すると各コンポーネントの `validate` が無効化されるため、`yupResolver` は導入しないでください。
 

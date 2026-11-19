@@ -36,7 +36,7 @@ const LOCALE_STORAGE_KEY = "shipchecker-locale-v2";
 
 const SHIP_TYPE_ICON_PATHS: Record<ShipType, string> = {
     dd: "/dd.png",
-    cr: "/cr.png",
+    "ca-cl": "/ca-cl.png",
     bb: "/bb.png",
     cv: "/cv.png",
     sb: "/sb.png",
@@ -129,7 +129,7 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         aircraftLabel: "Aircraft",
         sheetBanLabel: "Sheet BAN",
         removeButton: "Remove",
-        optionalRadarLabel: "Count this ship as using radar (for allRader rule)",
+        optionalRadarLabel: "Count this ship as using radar (for allRadar rule)",
         ruleCheck: "Rule check",
         ruleViolationDetected: (count) => `Rule violation detected: ${count}`,
         availableShips: "Available ships",
@@ -174,7 +174,7 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         aircraftLabel: "航空機",
         sheetBanLabel: "シートBAN",
         removeButton: "削除",
-        optionalRadarLabel: "この艦をレーダー使用としてカウントする（allRader ルール）",
+        optionalRadarLabel: "この艦をレーダー使用としてカウントする（allRadar ルール）",
         ruleCheck: "ルール確認",
         ruleViolationDetected: (count) => `ルール違反: ${count}件`,
         availableShips: "選択可能な艦艇",
@@ -224,7 +224,7 @@ function shipTypeBadgeClass(type: ShipType): string {
     if (type === "dd") {
         return "bg-sky-600 text-white dark:bg-sky-700/70 dark:text-sky-100";
     }
-    if (type === "cr") {
+    if (type === "ca-cl") {
         return "bg-teal-600 text-white dark:bg-teal-700/70 dark:text-teal-100";
     }
     if (type === "bb") {
@@ -860,9 +860,9 @@ export default function ShipCheckerClient() {
                                                     <ShipTypeBadge type={entry.ship.type} />
                                                     <CountryBadge country={entry.ship.country} />
                                                     <span className="rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 px-2 py-0.5">{text.tierLabel(entry.ship.tier)}</span>
-                                                    {entry.ship.hasRader !== "No" && (
+                                                    {entry.ship.hasRadar !== "No" && (
                                                         <span className="rounded bg-cyan-600 text-white dark:bg-cyan-700/70 px-2 py-0.5 dark:text-cyan-100">
-                                                            {text.radarLabel(entry.ship.hasRader)}
+                                                            {text.radarLabel(entry.ship.hasRadar)}
                                                         </span>
                                                     )}
                                                     {entry.ship.hasAircraft && (
@@ -887,7 +887,7 @@ export default function ShipCheckerClient() {
                                             </button>
                                         </div>
 
-                                        {entry.ship.hasRader === "Optional" && (
+                                        {entry.ship.hasRadar === "Optional" && (
                                             <label className="mt-3 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                                                 <input
                                                     type="checkbox"
@@ -1029,9 +1029,9 @@ export default function ShipCheckerClient() {
                                                     <ShipTypeBadge type={ship.type} />
                                                     <CountryBadge country={ship.country} />
                                                     <span className="rounded bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 px-2 py-0.5">{text.tierLabel(ship.tier)}</span>
-                                                    {ship.hasRader !== "No" && (
+                                                    {ship.hasRadar !== "No" && (
                                                         <span className="rounded bg-cyan-600 text-white dark:bg-cyan-700/70 px-2 py-0.5 dark:text-cyan-100">
-                                                            {text.radarLabel(ship.hasRader)}
+                                                            {text.radarLabel(ship.hasRadar)}
                                                         </span>
                                                     )}
                                                     {ship.hasAircraft && (
