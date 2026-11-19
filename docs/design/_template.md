@@ -29,7 +29,7 @@
 | **エラー時挙動** | | |
 
 ### 2.2 API / URL / データスキーマ契約
-<!-- リクエスト・レスポンスの TypeScript 型定義、URL クエリパラメータ仕様などを明記します。後方互換性（例: hasRader / allRader 等）の要件があれば注記します。 -->
+<!-- リクエスト・レスポンスの TypeScript 型定義、URL クエリパラメータ仕様などを明記します。後方互換性（例: /api/shipchecker レスポンススキーマ（hasRadar / allRadar / ca-cl 等））の要件があれば注記します。 -->
 
 ```typescript
 // 型定義イメージ

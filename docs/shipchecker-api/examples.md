@@ -22,7 +22,7 @@
 ```typescript
 // shipcheckerClient.ts
 
-export type ShipType = "dd" | "cr" | "bb" | "cv" | "sb";
+export type ShipType = "dd" | "ca-cl" | "bb" | "cv" | "sb";
 export type RadarCapability = "Default" | "Optional" | "No";
 export type RuleKind = "namePattern" | "shipName" | "country" | "type" | "feature" | "special";
 
@@ -34,7 +34,7 @@ export interface ShipData {
     aliases: string[];
     country: string;
     tier: number | null;
-    hasRader: RadarCapability; // 互換維持のため "Rader" スペル
+    hasRadar: RadarCapability;
     hasAircraft: boolean;
     isBan: boolean;
     addDate: string;
@@ -99,7 +99,7 @@ export async function fetchShipCheckerData(forceReload = false): Promise<ShipChe
 export interface SelectedShipInput {
     /** /api/shipchecker の ship.displayName を推奨 */
     name: string;
-    /** hasRader === "Optional" の艦をレーダー使用として数える場合 true */
+    /** hasRadar === "Optional" の艦をレーダー使用として数える場合 true */
     useOptionalRadar?: boolean;
 }
 
@@ -139,7 +139,7 @@ async function example() {
     console.log(`選択可能な Tier 10 艦: ${availableTier10Ships.length} 隻`);
 
     // Optional レーダー艦を探す例
-    const optionalRadarShips = availableTier10Ships.filter((ship) => ship.hasRader === "Optional");
+    const optionalRadarShips = availableTier10Ships.filter((ship) => ship.hasRadar === "Optional");
     console.log("レーダー選択可能艦の例:", optionalRadarShips.slice(0, 5).map((s) => s.displayName));
 
     // 公式チェッカーを開く URL を生成
@@ -187,7 +187,7 @@ async function example() {
       ships: picks.map((s) => s.displayName).join(","),
     });
 
-    const radarTargets = picks.filter((s) => s.hasRader === "Optional").map((s) => s.displayName);
+    const radarTargets = picks.filter((s) => s.hasRadar === "Optional").map((s) => s.displayName);
     if (radarTargets.length > 0) {
       params.set("radar", radarTargets.join(","));
     }
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     optional_ships = [
         s["displayName"]
         for s in data["ships"]
-        if s["hasRader"] == "Optional" and not s["isBan"]
+        if s["hasRadar"] == "Optional" and not s["isBan"]
     ]
     print("Optional radar ships (sample):", optional_ships[:5])
 
@@ -348,20 +348,17 @@ curl -i -X OPTIONS https://form.japandreammatch.info/api/shipchecker \
 
 ## 6. よくあるつまずき・FAQ
 
-### Q1. `hasRader` / `allRader` の値やルールが取得できません
-プロパティ名と特殊ルール名は **`Radar` ではなく `Rader`**（`hasRader`、`allRader`）です。既存システムとの後方互換性のためにそのまま維持されています。
-
-### Q2. ブラウザからの `fetch` が CORS エラーになります
+### Q1. ブラウザからの `fetch` が CORS エラーになります
 - **`credentials: "include"` を付けていませんか？**
   - 本 API は認証不要の公開データであり `Access-Control-Allow-Origin: *` を返すため、`Access-Control-Allow-Credentials` は返却しません。`fetch(url)`（デフォルト）または `fetch(url, { credentials: "omit" })` を使用してください。
 - **許可されていないカスタムリクエストヘッダーを付けていませんか？**
   - `Authorization` や独自の `X-*` ヘッダー、あるいは `Cache-Control: no-cache`（例: `fetch(url, { cache: "no-store" })` 等）を付けると CORS プリフライトで弾かれます。通常の `fetch("https://form.japandreammatch.info/api/shipchecker")` で呼び出してください。
 
-### Q3. 運営がスプレッドシートを更新したのに API の内容がすぐ変わりません
+### Q2. 運営がスプレッドシートを更新したのに API の内容がすぐ変わりません
 サーバー側・ブラウザ側ともに **デフォルト 300秒（5分）のキャッシュ** が効いています。5分前後経過してから再読み込みしてください。
 
-### Q4. 外部ツール側のデータ保存で艦の `id` をキーにしても大丈夫ですか？
-`id`（例: `cr-0-des-moines`）にはスプレッドシートの行インデックスが含まれるため、運営が行の追加・削除を行うと番号がずれる場合があります。編成の保存や URL 連携には **`ship.displayName`** を使うことをおすすめします。
+### Q3. 外部ツール側のデータ保存で艦の `id` をキーにしても大丈夫ですか？
+`id`（例: `ca-cl-0-des-moines`）にはスプレッドシートの行インデックスが含まれるため、運営が行の追加・削除を行うと番号がずれる場合があります。編成の保存や URL 連携には **`ship.displayName`** を使うことをおすすめします。
 
-### Q5. URL の `ships` に空白や日本語を含めるときの注意点は？
+### Q4. URL の `ships` に空白や日本語を含めるときの注意点は？
 `URLSearchParams`（JS/TS）や `urllib.parse.urlencode(..., quote_via=urllib.parse.quote)`（Python）等で URL エンコードしてください。空白は `%20` でも `+` でも受け付けます（例: `Des%20Moines` / `Des+Moines`）。また、カンマ `,` は艦名の区切り文字として解釈されます。

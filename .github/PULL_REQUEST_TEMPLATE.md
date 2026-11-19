@@ -29,7 +29,7 @@
 - [ ] **Google Sheets クォータ・シート互換性**:
   - `REGISTER_HEADER`（8列: `A`〜`H`、`G2`=LogoURL、`H2〜H5`=Salt/Hash/Lock）および `@init` 等の `@` 付きシート除外規則を壊していない
   - 不要な `doc.loadInfo()` の重複呼び出しや未認証キャッシュバイパス経路を追加していない
-- [ ] **外部連携スキーマ互換**: `/api/shipchecker` のレスポンス構造（`hasRader` / `allRader` のスペル等）の後方互換性を維持している
+- [ ] **外部連携スキーマ互換**: `/api/shipchecker` のレスポンス構造（`hasRadar` / `allRadar` / `ca-cl` 等）の後方互換性を維持している
 
 ## 5. テスト・検証結果 (Verification)
 

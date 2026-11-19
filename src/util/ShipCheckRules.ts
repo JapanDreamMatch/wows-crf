@@ -1,4 +1,4 @@
-export const SHIP_TYPES = ["dd", "cr", "bb", "cv", "sb"] as const;
+export const SHIP_TYPES = ["dd", "ca-cl", "bb", "cv", "sb"] as const;
 
 export type ShipType = (typeof SHIP_TYPES)[number];
 export type RadarCapability = "Default" | "Optional" | "No";
@@ -13,7 +13,7 @@ export interface ShipData {
     aliases: string[];
     country: string;
     tier: number | null;
-    hasRader: RadarCapability;
+    hasRadar: RadarCapability;
     hasAircraft: boolean;
     isBan: boolean;
     addDate: string;
@@ -58,7 +58,7 @@ export interface AddAvailability {
 
 export const SHIP_TYPE_LABELS: Record<ShipType, string> = {
     dd: "DD",
-    cr: "CA/CL",
+    "ca-cl": "CA/CL",
     bb: "BB",
     cv: "CV",
     sb: "SB",
@@ -118,8 +118,8 @@ function matchesType(ship: ShipData, shipTypes: string[]): boolean {
 
 function matchesFeature(entry: SelectedShipEntry, featureName: string): boolean {
     const normalized = normalizeText(featureName);
-    if (normalized === "hasrader") {
-        return entry.ship.hasRader === "Default" || entry.ship.hasRader === "Optional";
+    if (normalized === "hasradar") {
+        return entry.ship.hasRadar === "Default" || entry.ship.hasRadar === "Optional";
     }
     if (normalized === "hasaircraft") {
         return entry.ship.hasAircraft;
@@ -129,8 +129,8 @@ function matchesFeature(entry: SelectedShipEntry, featureName: string): boolean 
 
 function matchesSpecial(entry: SelectedShipEntry, specialName: string): boolean {
     const normalized = normalizeText(specialName);
-    if (normalized === "allrader") {
-        return entry.ship.hasRader === "Default" || (entry.ship.hasRader === "Optional" && entry.useOptionalRadar);
+    if (normalized === "allradar") {
+        return entry.ship.hasRadar === "Default" || (entry.ship.hasRadar === "Optional" && entry.useOptionalRadar);
     }
     if (normalized === "tier11") {
         return entry.ship.tier === 11;
@@ -168,7 +168,7 @@ function countMatches(rule: ShipRule, entries: SelectedShipEntry[]): number {
 
 function getFeatureLabel(target: string, locale: ShipCheckerLocale): string {
     const normalized = normalizeText(target);
-    if (normalized === "hasrader") {
+    if (normalized === "hasradar") {
         return locale === "ja" ? "レーダー搭載可能艦" : "Radar capable ships";
     }
     if (normalized === "hasaircraft") {
@@ -179,7 +179,7 @@ function getFeatureLabel(target: string, locale: ShipCheckerLocale): string {
 
 function getSpecialLabel(target: string, locale: ShipCheckerLocale): string {
     const normalized = normalizeText(target);
-    if (normalized === "allrader") {
+    if (normalized === "allradar") {
         return locale === "ja" ? "実際にレーダーを使用する艦艇" : "Ships actually sailing with radar";
     }
     if (normalized === "tier11") {
@@ -247,11 +247,11 @@ export function classifyRuleKind(tokens: string[], countries: string[]): RuleKin
     }
 
     if (normalizedTokens.length === 1) {
-        if (firstToken === "hasrader" || firstToken === "hasaircraft") {
+        if (firstToken === "hasradar" || firstToken === "hasaircraft") {
             return "feature";
         }
 
-        if (firstToken === "allrader" || firstToken === "tier11" || firstToken === "shipamount") {
+        if (firstToken === "allradar" || firstToken === "tier11" || firstToken === "shipamount") {
             return "special";
         }
     }

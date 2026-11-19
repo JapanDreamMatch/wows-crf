@@ -144,7 +144,7 @@ export function parseInitialSelectionFromParams(
         }
 
         let useOptionalRadar = false;
-        if (matchedShip.hasRader === "Optional") {
+        if (matchedShip.hasRadar === "Optional") {
             const remaining = radarCountByShipId.get(matchedShip.id) ?? 0;
             if (remaining > 0) {
                 useOptionalRadar = true;

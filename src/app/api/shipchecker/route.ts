@@ -202,7 +202,7 @@ async function loadShips(spreadSheet: GoogleSpreadsheetService): Promise<ShipDat
             const displayName = aliases[0] ?? rawName;
             const country = readRowValue(rowData, "country");
             const tier = parseTier(readRowValue(rowData, "tier"));
-            const hasRader = parseRadarCapability(readRowValue(rowData, "hasRader"));
+            const hasRadar = parseRadarCapability(readRowValue(rowData, "hasRadar"));
             const hasAircraft = parseBooleanYes(readRowValue(rowData, "hasAircraft"));
             const isBan = parseBooleanYes(readRowValue(rowData, "isBan"));
             const addDate = readRowValue(rowData, "addDate");
@@ -216,7 +216,7 @@ async function loadShips(spreadSheet: GoogleSpreadsheetService): Promise<ShipDat
                 aliases,
                 country,
                 tier,
-                hasRader,
+                hasRadar,
                 hasAircraft,
                 isBan,
                 addDate,

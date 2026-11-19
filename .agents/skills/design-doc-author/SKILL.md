@@ -24,7 +24,7 @@ description: >-
 - **2. インターフェース・シート契約 (Contract-Explicit)**:
   - API のリクエスト/レスポンス型（TypeScript `interface`）、HTTP ステータスコード、URL クエリパラメータが表とコードブロックで明示されているか？
   - Google SpreadSheet を扱う場合、`REGISTER_HEADER`（A〜H列）や対象セル座標（例: `G2`, `H2〜H5`）、`@init` 除外規則との整合性が明記されているか？
-  - 既存外部連携との後方互換性（例: `hasRader` / `allRader` のスペル維持）を破壊していないか？
+  - 既存外部連携との後方互換性（例: `/api/shipchecker` の `hasRadar` / `allRadar` / `ca-cl`）を破壊していないか？
 - **3. シーケンス図 (Mermaid)**:
   - `sequenceDiagram` で正常系だけでなく、バリデーション失敗・外部 API エラー・GCS ロールバック削除・Stale キャッシュフォールバックなどの異常系分岐が描かれているか？
 - **4. 純粋ロジックと I/O の分離**:

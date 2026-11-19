@@ -15,7 +15,7 @@
 - **Google Sheets クォータ保護**: `doc.loadInfo()` の重複呼び出しを避け、`/api/shipchecker` では `ShipCheckerCache`（Singleflight & Stale-on-Error）を維持してください。
 
 ## 3. 後方互換性の維持
-- `hasRader` および `allRader` のスペルは外部ツール連携の互換性維持のため変更しないでください。
+- `hasRadar`、`allRadar`、および艦種コード（`dd` / `ca-cl` / `bb` / `cv` / `sb`）は `SHIP_AND_RULES_SHEET_ID` および外部ツール連携の契約と一致させてください。
 - 応募シートで `@` を含むタブ名（`@init` 等）はチーム数カウントから除外される仕様です。チーム略名に `@` を許可しないでください。
 - `REGISTER_HEADER`（8列: `Type, IGN, ID, WinRate, Contact, Comment, LogoURL, SaltAndHash`）の列順序・セル座標を壊さないでください。
 
