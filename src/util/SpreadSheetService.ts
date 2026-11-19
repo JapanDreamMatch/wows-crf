@@ -96,4 +96,19 @@ export class GoogleSpreadsheetService {
         await this.doc.loadInfo();
         return this.doc.sheetsByTitle[sheetTitle];
     }
+
+    /**
+     * スプレッドシートのメタデータ・シート一覧を1回読み込む。
+     */
+    async loadInfo(): Promise<void> {
+        await this.doc.loadInfo();
+    }
+
+    /**
+     * loadInfo() 済みブックから、追加の API 通信なしでワークシートを取得する。
+     * @param sheetTitle シート名
+     */
+    getLoadedSheet(sheetTitle: string): GoogleSpreadsheetWorksheet | undefined {
+        return this.doc.sheetsByTitle[sheetTitle];
+    }
 }

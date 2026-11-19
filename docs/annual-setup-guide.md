@@ -170,6 +170,7 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 | `REGISTER_SHEET_ID` | 応募登録スプレッドシートのID | **必須更新** |
 | `API_SETTINGS_SHEET_ID` | 期間・上限チーム数設定シートのID | **必須更新**（別シートにした場合） |
 | `SHIP_AND_RULES_SHEET_ID` | 艦艇チェッカールールシートのID | **必須更新**（※機能有効時） |
+| `SHIPCHECKER_CACHE_TTL_SECONDS` | `/api/shipchecker` のキャッシュ有効秒数（デフォルト: `300`、`0` でキャッシュ無効） | 任意（未設定時は300秒） |
 | `GCS_BUCKET_NAME` | ロゴ画像保存先Cloud Storageバケット名 | 原則維持（`jdm-team-icon`） |
 | `WOWS_API_APP_ID` | Wargaming Developer Room発行のAPIキー | 原則維持（有効性確認のみ） |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | GCPサービスアカウントのメールアドレス | 原則維持 |
@@ -199,7 +200,10 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 ### ステップ1: 艦艇チェッカーの動作確認
 1. ブラウザで `/shipchecker` にアクセス
 2. 最新年度の艦艇、国家、ルールが正しく表示されるか確認
+   > [!NOTE]
+   > スプレッドシートを更新してから本番へ反映されるまで、キャッシュにより最大 `SHIPCHECKER_CACHE_TTL_SECONDS` 秒（デフォルト **300秒 / 5分**）かかります。ローカル開発環境で変更を即時確認したい場合は、`.env.local` に `SHIPCHECKER_CACHE_TTL_SECONDS=0` を設定してください。
 3. 規定隻数を選択し、制限チェックが意図通り動作するかテスト
+4. 必要に応じて URL クエリ指定（例: `/shipchecker?ships=Des%20Moines,Shimakaze&radar=Des%20Moines`）で初期選択・レーダーカウント・違反表示が正しく動作するか確認
 
 ### ステップ2: 募集期間外の表示確認
 1. API設定シートの `registerPeriod` の `Ignore(debug)` が空欄であることを確認

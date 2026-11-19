@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import {
+    getCachedShipCheckerData,
+    type ShipCheckerCacheStatus,
+    type ShipCheckerPayload,
+} from "@/util/ShipCheckerCache";
+import {
     SHIP_TYPES,
     classifyRuleKind,
     type RadarCapability,
@@ -13,6 +18,38 @@ import {
 export const dynamic = "force-dynamic";
 
 const MAX_SCAN_ROWS = 500;
+
+const SHIPCHECKER_CORS_HEADERS: Record<string, string> = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Expose-Headers": "X-Cache",
+    "Access-Control-Max-Age": "86400",
+};
+
+function buildCacheControlHeader(cacheStatus: ShipCheckerCacheStatus, ttlSeconds: number): string {
+    if (cacheStatus === "BYPASS" || ttlSeconds <= 0) {
+        return "no-store";
+    }
+    if (cacheStatus === "STALE") {
+        return "public, max-age=30";
+    }
+    return `public, max-age=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`;
+}
+
+function createShipCheckerJsonResponse(
+    body: unknown,
+    status: number,
+    extraHeaders?: Record<string, string>,
+) {
+    return NextResponse.json(body, {
+        status,
+        headers: {
+            ...SHIPCHECKER_CORS_HEADERS,
+            ...extraHeaders,
+        },
+    });
+}
 
 function toCellText(value: unknown): string {
     if (value === null || value === undefined) {
@@ -114,7 +151,7 @@ function buildShipId(type: ShipType, index: number, name: string): string {
 }
 
 async function loadCountryList(spreadSheet: GoogleSpreadsheetService): Promise<string[]> {
-    const countrySheet = await spreadSheet.getSheet("country");
+    const countrySheet = spreadSheet.getLoadedSheet("country");
     if (!countrySheet) {
         throw new Error("Sheet 'country' was not found.");
     }
@@ -144,10 +181,16 @@ async function loadCountryList(spreadSheet: GoogleSpreadsheetService): Promise<s
 }
 
 async function loadShips(spreadSheet: GoogleSpreadsheetService): Promise<ShipData[]> {
+    const rowsByType = await Promise.all(
+        SHIP_TYPES.map(async (type) => ({
+            type,
+            rows: await spreadSheet.getRows(type),
+        })),
+    );
+
     const ships: ShipData[] = [];
 
-    for (const type of SHIP_TYPES) {
-        const rows = await spreadSheet.getRows(type);
+    for (const { type, rows } of rowsByType) {
         rows.forEach((row, index) => {
             const rowData = toShipRowRecord(row);
             const rawName = readRowValue(rowData, "name");
@@ -195,7 +238,7 @@ async function loadShips(spreadSheet: GoogleSpreadsheetService): Promise<ShipDat
 }
 
 async function loadRules(spreadSheet: GoogleSpreadsheetService, countries: string[]): Promise<ShipRuleSet> {
-    const rulesSheet = await spreadSheet.getSheet("rules");
+    const rulesSheet = spreadSheet.getLoadedSheet("rules");
     if (!rulesSheet) {
         throw new Error("Sheet 'rules' was not found.");
     }
@@ -252,7 +295,7 @@ async function loadRules(spreadSheet: GoogleSpreadsheetService, countries: strin
 }
 
 async function loadVersion(spreadSheet: GoogleSpreadsheetService): Promise<string> {
-    const versionSheet = await spreadSheet.getSheet("version");
+    const versionSheet = spreadSheet.getLoadedSheet("version");
     if (!versionSheet) {
         return "";
     }
@@ -260,34 +303,57 @@ async function loadVersion(spreadSheet: GoogleSpreadsheetService): Promise<strin
     return toCellText(versionSheet.getCell(0, 0).value);
 }
 
+async function fetchShipCheckerDataFromSheet(sheetId: string): Promise<ShipCheckerPayload> {
+    const spreadSheet = new GoogleSpreadsheetService(sheetId);
+    await spreadSheet.loadInfo();
+
+    const [version, countries, ships] = await Promise.all([
+        loadVersion(spreadSheet),
+        loadCountryList(spreadSheet),
+        loadShips(spreadSheet),
+    ]);
+    const rules = await loadRules(spreadSheet, countries);
+
+    return {
+        version,
+        countries,
+        ships,
+        rules,
+        fetchedAt: new Date().toISOString(),
+    };
+}
+
+export async function OPTIONS() {
+    return new NextResponse(null, {
+        status: 204,
+        headers: SHIPCHECKER_CORS_HEADERS,
+    });
+}
+
 export async function GET() {
     try {
         const sheetId = process.env.SHIP_AND_RULES_SHEET_ID;
         if (!sheetId) {
-            return NextResponse.json({ message: "SHIP_AND_RULES_SHEET_ID is not configured." }, { status: 500 });
+            console.error("SHIP_AND_RULES_SHEET_ID is not configured.");
+            return createShipCheckerJsonResponse(
+                { message: "Shipchecker service is not configured." },
+                500,
+                { "Cache-Control": "no-store" },
+            );
         }
 
-        const spreadSheet = new GoogleSpreadsheetService(sheetId);
-        await spreadSheet.getSheetNames();
+        const result = await getCachedShipCheckerData(() => fetchShipCheckerDataFromSheet(sheetId));
 
-        const version = await loadVersion(spreadSheet);
-        const countries = await loadCountryList(spreadSheet);
-        const ships = await loadShips(spreadSheet);
-        const rules = await loadRules(spreadSheet, countries);
-
-        return NextResponse.json({
-            version,
-            countries,
-            ships,
-            rules,
-            fetchedAt: new Date().toISOString(),
+        return createShipCheckerJsonResponse(result.data, 200, {
+            "Cache-Control": buildCacheControlHeader(result.cacheStatus, result.ttlSeconds),
+            "X-Cache": result.cacheStatus,
         });
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "unknown error";
         console.error("Failed to load shipchecker data", error);
-        return NextResponse.json(
-            { message: `Failed to load shipchecker data. ${message}` },
-            { status: 500 },
+        return createShipCheckerJsonResponse(
+            { message: "Failed to load shipchecker data." },
+            500,
+            { "Cache-Control": "no-store" },
         );
     }
 }
