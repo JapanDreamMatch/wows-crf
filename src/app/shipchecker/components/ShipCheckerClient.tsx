@@ -3,7 +3,9 @@
 import axios from "axios";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { MAX_URL_SHIPS, parseInitialSelectionFromParams } from "@/util/ShipCheckerQuery";
 import {
     SHIP_TYPES,
     SHIP_TYPE_LABELS,
@@ -100,6 +102,11 @@ type ShipCheckerText = {
     addButton: string;
     countryRuleHeading: string;
     typeRuleHeading: string;
+    urlWarningTitle: string;
+    urlUnknownShips: (names: string) => string;
+    urlUnknownRadarShips: (names: string) => string;
+    urlTruncatedShips: (limit: number, omitted: number) => string;
+    dismissWarning: string;
 };
 
 const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
@@ -141,6 +148,12 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         addButton: "Add",
         countryRuleHeading: "Countries",
         typeRuleHeading: "Ship types",
+        urlWarningTitle: "Some URL parameters could not be applied",
+        urlUnknownShips: (names) => `Ships not found in the list (skipped): ${names}`,
+        urlUnknownRadarShips: (names) => `Radar targets not found or not selected in ships (ignored): ${names}`,
+        urlTruncatedShips: (limit, omitted) =>
+            `Up to ${limit} ships can be loaded from URL (${omitted} additional ship(s) were omitted).`,
+        dismissWarning: "Dismiss",
     },
     ja: {
         languageLabel: "言語",
@@ -180,11 +193,23 @@ const SHIP_CHECKER_TEXT: Record<ShipCheckerLocale, ShipCheckerText> = {
         addButton: "追加",
         countryRuleHeading: "国家",
         typeRuleHeading: "艦種",
+        urlWarningTitle: "URLパラメータの一部を適用できませんでした",
+        urlUnknownShips: (names) => `一覧に見つからなかった艦艇（スキップしました）: ${names}`,
+        urlUnknownRadarShips: (names) => `radar 指定のうち未登録または未選択の艦艇（無視しました）: ${names}`,
+        urlTruncatedShips: (limit, omitted) =>
+            `URL から一度に読み込めるのは最大 ${limit} 隻までです（超過した ${omitted} 隻は無視されました）。`,
+        dismissWarning: "閉じる",
     },
 };
 
 function normalizeText(value: string): string {
     return value.trim().toLowerCase();
+}
+
+function formatWarningNames(names: string[], maxLength = 60): string {
+    return names
+        .map((name) => (name.length > maxLength ? `${name.slice(0, maxLength)}...` : name))
+        .join(", ");
 }
 
 function getShipSearchText(ship: ShipData): string {
@@ -430,12 +455,20 @@ function CountryBadge({ country }: { country: string }) {
 }
 
 export default function ShipCheckerClient() {
+    const searchParams = useSearchParams();
+    const hasAppliedUrlParamsRef = useRef(false);
+
     const [locale, setLocale] = useState<ShipCheckerLocale>("ja");
     const text = SHIP_CHECKER_TEXT[locale];
 
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [data, setData] = useState<ShipCheckerApiResponse | null>(null);
+    const [urlWarning, setUrlWarning] = useState<{
+        unknownShips: string[];
+        unknownRadarShips: string[];
+        truncatedCount: number;
+    } | null>(null);
 
     const [nameFilter, setNameFilter] = useState<string>("");
     const [typeFilter, setTypeFilter] = useState<ShipType | typeof ALL_FILTER>(ALL_FILTER);
@@ -487,6 +520,29 @@ export default function ShipCheckerClient() {
             isMounted = false;
         };
     }, []);
+
+    useEffect(() => {
+        if (status !== "ready" || !data || hasAppliedUrlParamsRef.current) {
+            return;
+        }
+        hasAppliedUrlParamsRef.current = true;
+
+        const parsed = parseInitialSelectionFromParams(searchParams, data.ships);
+        if (parsed.entries.length > 0) {
+            setSelectedEntries(parsed.entries);
+        }
+        if (
+            parsed.unknownShips.length > 0 ||
+            parsed.unknownRadarShips.length > 0 ||
+            parsed.truncatedCount > 0
+        ) {
+            setUrlWarning({
+                unknownShips: parsed.unknownShips,
+                unknownRadarShips: parsed.unknownRadarShips,
+                truncatedCount: parsed.truncatedCount,
+            });
+        }
+    }, [data, searchParams, status]);
 
     const selectedCountByShipId = useMemo(() => {
         const map = new Map<string, number>();
@@ -757,6 +813,33 @@ export default function ShipCheckerClient() {
                     </div>
                 </header>
 
+                {urlWarning && (
+                    <div
+                        role="alert"
+                        className="flex items-start justify-between gap-3 rounded-lg border border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+                    >
+                        <div className="space-y-1 break-all">
+                            <p className="font-semibold text-amber-800 dark:text-amber-200">{text.urlWarningTitle}</p>
+                            {urlWarning.unknownShips.length > 0 && (
+                                <p>{text.urlUnknownShips(formatWarningNames(urlWarning.unknownShips))}</p>
+                            )}
+                            {urlWarning.unknownRadarShips.length > 0 && (
+                                <p>{text.urlUnknownRadarShips(formatWarningNames(urlWarning.unknownRadarShips))}</p>
+                            )}
+                            {urlWarning.truncatedCount > 0 && (
+                                <p>{text.urlTruncatedShips(MAX_URL_SHIPS, urlWarning.truncatedCount)}</p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setUrlWarning(null)}
+                            className="shrink-0 rounded border border-amber-400 dark:border-amber-600 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:text-amber-100 dark:hover:bg-amber-900/50"
+                        >
+                            {text.dismissWarning}
+                        </button>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <section className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4 shadow-sm dark:shadow-none">
                         <h2 className="text-lg font-semibold">{text.selectedShips}</h2>
@@ -785,6 +868,11 @@ export default function ShipCheckerClient() {
                                                     {entry.ship.hasAircraft && (
                                                         <span className="rounded bg-indigo-600 text-white dark:bg-indigo-700/70 px-2 py-0.5 dark:text-indigo-100">
                                                             {text.aircraftLabel}
+                                                        </span>
+                                                    )}
+                                                    {entry.ship.isBan && (
+                                                        <span className="rounded bg-rose-600 text-white dark:bg-rose-700/70 px-2 py-0.5 dark:text-rose-100">
+                                                            {text.sheetBanLabel}
                                                         </span>
                                                     )}
                                                 </div>
