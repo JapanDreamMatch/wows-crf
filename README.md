@@ -12,6 +12,9 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # JDM大会開催時の運用マニュアル
 毎年の開催準備手順（スプレッドシートやCloud Storage、環境変数の更新手順）については、[JDM開催時 Webフォーム準備・更新手順書](docs/annual-setup-guide.md) を参照してください。
 
+# 艦艇チェッカー 外部連携ドキュメント (CORS API / URL連携)
+外部サイト・編成ツールから `/api/shipchecker` を取得する方法や `/shipchecker?ships=...&radar=...` 連携仕様については、[艦艇チェッカー 外部連携ガイド](docs/shipchecker-api/README.md) を参照してください。
+
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
@@ -35,6 +38,8 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL='name@project-123456.iam.gserviceaccount.com'
 REGISTER_SHEET_ID='sheetid'
 WOWS_API_APP_ID="appid"
 SHIP_AND_RULES_SHEET_ID=''
+# 任意: /api/shipchecker のサーバー側キャッシュ有効秒数（デフォルト: 300、0 で無効化）
+SHIPCHECKER_CACHE_TTL_SECONDS='300'
 ```
 ※ 従来の `DRIVE_FOLDER_ID`（Google Drive）は廃止され、Cloud Storage（`GCS_BUCKET_NAME`）に移行しました。
 
