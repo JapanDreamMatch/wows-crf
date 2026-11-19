@@ -15,6 +15,15 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 # 艦艇チェッカー 外部連携ドキュメント (CORS API / URL連携)
 外部サイト・編成ツールから `/api/shipchecker` を取得する方法や `/shipchecker?ships=...&radar=...` 連携仕様については、[艦艇チェッカー 外部連携ガイド](docs/shipchecker-api/README.md) を参照してください。
 
+# 開発・設計書・テスト (Development & Architecture)
+- **設計書・執筆ガイドライン**: 各機能の設計書および新規設計書のテンプレートは [`docs/design/`](docs/design/README.md) に格納されています。
+- **AI エージェントハーネス**: Antigravity / Claude Code / Codex / GitHub Copilot 向けの共通規約は [`AGENTS.md`](AGENTS.md) を参照してください。
+- **PR・ローカル品質チェック**:
+  ```bash
+  npm run check   # セキュリティ検査 + 型チェック + ESLint + Vitest 単体テストを一括実行
+  npm test        # Vitest 単体テストのみ実行
+  ```
+
 # 導入ライブラリ
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
