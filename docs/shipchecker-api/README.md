@@ -12,6 +12,7 @@ World of Warships Japan Dream Match (JDM) 公式艦艇チェッカー（`https:/
 |---|---|
 | [API リファレンス (`api-reference.md`)](./api-reference.md) | `GET /api/shipchecker` の CORS 仕様、キャッシュ仕様、レスポンス JSON スキーマ、ルール判定ロジック |
 | [URL クエリ連携ガイド (`url-integration.md`)](./url-integration.md) | `/shipchecker?ships=...&radar=...` による初期選択・レーダー指定、艦名照合ルール、制限・警告仕様 |
+| [コードサンプル集・FAQ (`examples.md`)](./examples.md) | TypeScript / JavaScript / Python（標準ライブラリ・`requests`）/ `curl` の実装例とよくあるつまずき集 |
 
 ---
 

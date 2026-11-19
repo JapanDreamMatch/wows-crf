@@ -237,3 +237,34 @@ export async function fetchShipCheckerMaster(): Promise<ShipCheckerApiResponse> 
     return (await res.json()) as ShipCheckerApiResponse;
 }
 ```
+
+---
+
+## 呼び出しサンプル (Python)
+
+### 標準ライブラリのみ (`urllib.request`)
+
+```python
+import json
+import urllib.request
+
+with urllib.request.urlopen("https://form.japandreammatch.info/api/shipchecker", timeout=10) as res:
+    print("X-Cache:", res.headers.get("X-Cache"))
+    data = json.loads(res.read().decode("utf-8"))
+
+print(data["version"], len(data["ships"]), data["rules"]["shipAmount"])
+```
+
+### `requests` ライブラリ利用
+
+```python
+import requests
+
+res = requests.get("https://form.japandreammatch.info/api/shipchecker", timeout=10)
+res.raise_for_status()
+data = res.json()
+
+print(data["version"], len(data["ships"]), len(data["rules"]["rules"]))
+```
+
+より実践的なコード（メモリキャッシュ・非 BAN 艦抽出・URL 生成までの一連の例や FAQ）は [コードサンプル集 (`examples.md`)](./examples.md) を参照してください。

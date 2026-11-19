@@ -120,3 +120,35 @@ const url = buildShipCheckerUrl([
 
 > [!TIP]
 > `/api/shipchecker` から取得した `ship.displayName` をそのまま `name` に渡すと、表記揺れや別名変更の影響を受けにくく最も確実です。
+
+---
+
+## URL 生成サンプルコード (Python)
+
+```python
+import urllib.parse
+
+
+def build_shipchecker_url(ships: list[str], radar_ships: list[str] | None = None) -> str:
+    base_url = "https://form.japandreammatch.info/shipchecker"
+    cleaned_ships = [s.strip() for s in ships if s.strip()]
+    if not cleaned_ships:
+        return base_url
+
+    params: dict[str, str] = {"ships": ",".join(cleaned_ships)}
+    if radar_ships:
+        cleaned_radar = [r.strip() for r in radar_ships if r.strip()]
+        if cleaned_radar:
+            params["radar"] = ",".join(cleaned_radar)
+
+    return f"{base_url}?{urllib.parse.urlencode(params, quote_via=urllib.parse.quote)}"
+
+
+url = build_shipchecker_url(
+    ships=["Des Moines", "Minotaur", "Minotaur", "Shimakaze"],
+    radar_ships=["Minotaur"],
+)
+# => "https://form.japandreammatch.info/shipchecker?ships=Des%20Moines%2CMinotaur%2CMinotaur%2CShimakaze&radar=Minotaur"
+```
+
+JavaScript・TypeScript・Python（データ取得〜URL生成の結合例）や FAQ は [コードサンプル集 (`examples.md`)](./examples.md) を参照してください。
