@@ -1,12 +1,6 @@
-import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
+import { getCachedAppSettings } from "@/util/AppSettingsCache";
 
 export async function IsIgnore(): Promise<boolean> {
-    const { API_SETTINGS_SHEET_ID } = process.env;
-    const spreadSheet = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
-
-    const sheet = await spreadSheet.getSheet("registerPeriod");
-    await sheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3});
-    const isIgnore = sheet.getCell(1,2).value?.toString() ?? undefined;
-
-    return !(isIgnore == undefined || isIgnore != "YES")
+    const settings = await getCachedAppSettings();
+    return settings.isIgnore;
 }

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { GoogleSpreadsheetWorksheet } from "google-spreadsheet";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
-import { hashPassword } from "@/util/Argon2Service";
+import { hashPassword, MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { logServerError } from "@/util/SafeLogger";
 
 export const MAX_AUTH_FAILURES = 10;
@@ -110,7 +110,7 @@ export async function authenticateTeamUnlocked(
         };
     }
 
-    if (!password) {
+    if (!password || password.length > MAX_PASSWORD_LENGTH) {
         return {
             ok: false,
             status: 401,

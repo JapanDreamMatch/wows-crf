@@ -8,6 +8,9 @@ import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
 import { CloudStorageService } from "@/util/StorageService";
 import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
+import { MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
+import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
+import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import {
     extractFormString,
     hasDuplicateSheetName,
@@ -38,32 +41,6 @@ function extractObjectNameFromUrl(url: string): string | null {
     } catch {
         return null;
     }
-}
-
-/**
- * API設定シートからロゴ保存先ディレクトリ名を取得する
- */
-async function resolveLogoDirectory(apiSettingsSheetId: string): Promise<string> {
-    let logoDirectory = "logos";
-    try {
-        const settingsBook = new GoogleSpreadsheetService(apiSettingsSheetId);
-        const logoDirSheet = await settingsBook.getSheet("logo_directory");
-        if (logoDirSheet) {
-            await logoDirSheet.loadCells({
-                startRowIndex: 0,
-                endRowIndex: 2,
-                startColumnIndex: 0,
-                endColumnIndex: 1,
-            });
-            const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
-            if (dirVal) {
-                logoDirectory = dirVal;
-            }
-        }
-    } catch (e) {
-        console.warn("Failed to load logo_directory setting, fallback to 'logos':", e);
-    }
-    return logoDirectory;
 }
 
 /**
@@ -120,9 +97,26 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
-            const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
+            const rate = checkRateLimit("team-update", extractClientIp(req), 15, 60_000);
+            if (!rate.allowed) {
+                return {
+                    status: 429,
+                    body: { message: "リクエストが多すぎます。少し待ってから再度お試しください" },
+                };
+            }
 
-            // (1) 早期サイズチェック
+            // (1) 募集・変更受付期間チェック（認証や画像展開の前に実施）
+            const [checkTime, isIgnore] = await Promise.all([CheckTime(), IsIgnore()]);
+            if (!(isIgnore || checkTime)) {
+                return {
+                    status: 503,
+                    body: { message: "現在は変更受付期間ではありません" },
+                };
+            }
+
+            const { REGISTER_SHEET_ID } = process.env;
+
+            // (2) 早期サイズチェック
             const contentLength = Number(req.headers.get("content-length") ?? 0);
             if (contentLength > MAX_LOGO_SIZE + 1024 * 1024) {
                 return {
@@ -174,6 +168,10 @@ export async function POST(req: NextRequest) {
             const contact = contactField.value.trim();
             const comment = commentField.value.trim();
 
+            if (!password || password.length > MAX_PASSWORD_LENGTH) {
+                return { status: 401, body: { message: "パスワードが正しくありません" } };
+            }
+
             // 全テキストフィールド・ロスターのサーバーサイドバリデーション
             const validationErrors = [
                 validateTeamName(teamName),
@@ -186,7 +184,7 @@ export async function POST(req: NextRequest) {
                 return { status: 400, body: { message: validationErrors[0] } };
             }
 
-            // (2) 画像検証
+            // (3) 軽量な画像メタチェック（arrayBuffer 展開は認証成功後に実行）
             const logos = formData
                 .getAll("teamLogo")
                 .filter((v): v is File => typeof v === "object" && v.size > 0);
@@ -196,30 +194,18 @@ export async function POST(req: NextRequest) {
                     body: { message: "チームロゴは1枚のみ添付できます" },
                 };
             }
-            let logoBuffer: Buffer | null = null;
-            let logoType: DetectedImage | null = null;
-            if (logos.length === 1) {
-                if (logos[0].size > MAX_LOGO_SIZE) {
-                    return {
-                        status: 400,
-                        body: { message: "画像サイズは20MB以内である必要があります" },
-                    };
-                }
-                logoBuffer = Buffer.from(await logos[0].arrayBuffer());
-                logoType = detectImageType(logoBuffer);
-                if (!logoType) {
-                    return {
-                        status: 400,
-                        body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
-                    };
-                }
+            if (logos.length === 1 && logos[0].size > MAX_LOGO_SIZE) {
+                return {
+                    status: 400,
+                    body: { message: "画像サイズは20MB以内である必要があります" },
+                };
             }
 
             // 同一チーム（略名変更時は旧・新両方）の同時リクエスト排他ロック内で認証・更新を実行
             const lockedExec = await withTeamLocks([teamNickName, newTeamNickName], async () => {
                 sendProgress?.("チーム情報の確認", 5);
 
-                // (3) 認証 & シート取得
+                // (4) 認証 & シート取得
                 const auth = await authenticateTeamUnlocked(teamNickName, password);
                 if (!auth.ok) {
                     return {
@@ -228,14 +214,18 @@ export async function POST(req: NextRequest) {
                     };
                 }
 
-                // (4) 募集期間チェック
-                const checkTime = await CheckTime();
-                const isIgnore = await IsIgnore();
-                if (!(isIgnore || checkTime)) {
-                    return {
-                        status: 503,
-                        body: { message: "現在は変更受付期間ではありません" },
-                    };
+                // (5) 認証成功後に画像バイナリ・マジックナンバー検証を実施
+                let logoBuffer: Buffer | null = null;
+                let logoType: DetectedImage | null = null;
+                if (logos.length === 1) {
+                    logoBuffer = Buffer.from(await logos[0].arrayBuffer());
+                    logoType = detectImageType(logoBuffer);
+                    if (!logoType) {
+                        return {
+                            status: 400,
+                            body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
+                        };
+                    }
                 }
 
                 const isNickChanged = newTeamNickName !== auth.teamData.teamNickName;
@@ -254,7 +244,7 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                // (5) Wargaming API でプレイヤーの UID・勝率を取得
+                // (6) Wargaming API でプレイヤーの UID・勝率を取得
                 const players: Player[] = [];
                 for (let i = 0; i < igns.length; i++) {
                     sendProgress?.(`出場者${i + 1}の確認`, 10 + i * 7);
@@ -281,7 +271,7 @@ export async function POST(req: NextRequest) {
                           teamMemberWinRate.length
                         : 0;
 
-                // (6) ロゴ処理（新規アップロード、または略名変更に伴う既存ロゴのコピー）
+                // (7) ロゴ処理（新規アップロード、または略名変更に伴う既存ロゴのコピー）
                 const storage = new CloudStorageService();
                 let logoResult: { objectName: string; url: string } | null = null;
                 const prevLogoUrl = auth.teamData.logoUrl;
@@ -289,12 +279,12 @@ export async function POST(req: NextRequest) {
 
                 if (logoBuffer && logoType) {
                     sendProgress?.("画像のアップロード", 82);
-                    const logoDirectory = await resolveLogoDirectory(API_SETTINGS_SHEET_ID ?? "");
+                    const settings = await getCachedAppSettings();
                     logoResult = await storage.uploadTeamLogo(
                         logoBuffer,
                         logoType,
                         newTeamNickName,
-                        logoDirectory
+                        settings.logoDirectory
                     );
                 } else if (isNickChanged && prevObjectName) {
                     sendProgress?.("画像の移行", 82);
@@ -366,6 +356,7 @@ export async function POST(req: NextRequest) {
                         createdSheet = await spreadSheet.addSheet(newTeamNickName, REGISTER_HEADER);
                         await createdSheet.addRows(sheetRows, { raw: true });
                         await auth.sheet.delete();
+                        invalidateRegisterSheetNamesCache();
                     }
                 } catch (e) {
                     if (createdSheet) {

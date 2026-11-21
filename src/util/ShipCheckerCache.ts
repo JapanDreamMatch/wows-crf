@@ -29,17 +29,19 @@ interface InFlightResult {
 
 interface CacheStore {
     entry: CacheEntry | null;
+    coldErrorRetryAt: number;
     inFlight: Promise<InFlightResult> | null;
 }
 
 const DEFAULT_CACHE_TTL_SECONDS = 300;
 const STALE_RETRY_COOLDOWN_MS = 30_000;
+const COLD_ERROR_COOLDOWN_MS = 5_000;
 const GLOBAL_STORE_KEY = Symbol.for("wows-crf.shipchecker.cacheStore");
 
 function getCacheStore(): CacheStore {
     const g = globalThis as typeof globalThis & { [GLOBAL_STORE_KEY]?: CacheStore };
     if (!g[GLOBAL_STORE_KEY]) {
-        g[GLOBAL_STORE_KEY] = { entry: null, inFlight: null };
+        g[GLOBAL_STORE_KEY] = { entry: null, coldErrorRetryAt: 0, inFlight: null };
     }
     return g[GLOBAL_STORE_KEY];
 }
@@ -91,6 +93,10 @@ export async function getCachedShipCheckerData(
         };
     }
 
+    if (!store.entry && now < store.coldErrorRetryAt) {
+        throw new Error("Shipchecker data temporarily unavailable");
+    }
+
     if (!store.inFlight) {
         let fetchPromise: Promise<InFlightResult> | null = null;
         fetchPromise = (async () => {
@@ -100,6 +106,7 @@ export async function getCachedShipCheckerData(
                     data,
                     expiresAt: Date.now() + ttlSeconds * 1000,
                 };
+                store.coldErrorRetryAt = 0;
                 return { data, cacheStatus: "MISS" as const };
             } catch (error: unknown) {
                 if (store.entry) {
@@ -107,6 +114,7 @@ export async function getCachedShipCheckerData(
                     console.warn("Failed to refresh shipchecker cache; serving stale data.", error);
                     return { data: store.entry.data, cacheStatus: "STALE" as const };
                 }
+                store.coldErrorRetryAt = Date.now() + COLD_ERROR_COOLDOWN_MS;
                 throw error;
             } finally {
                 if (store.inFlight === fetchPromise) {
@@ -128,5 +136,6 @@ export async function getCachedShipCheckerData(
 export function resetShipCheckerCacheForTest(): void {
     const store = getCacheStore();
     store.entry = null;
+    store.coldErrorRetryAt = 0;
     store.inFlight = null;
 }

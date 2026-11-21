@@ -9,6 +9,7 @@ export const ARGON2_CONFIG = {
 } as const;
 
 export const MIN_PASSWORD_LENGTH = 8;
+export const MAX_PASSWORD_LENGTH = 128;
 
 /**
  * 16進文字列をバイト列 (Uint8Array) にデコードする
@@ -48,6 +49,9 @@ export function generateSalt(): string {
  * サーバー側APIおよび /generatehash で同一の計算を行う
  */
 export async function hashPassword(password: string, saltHex: string): Promise<string> {
+    if (password.length > MAX_PASSWORD_LENGTH) {
+        throw new Error(`パスワードは${MAX_PASSWORD_LENGTH}文字以内で入力してください`);
+    }
     const saltBytes = hexToBytes(saltHex);
     return await argon2id({
         password,

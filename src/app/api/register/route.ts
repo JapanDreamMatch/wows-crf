@@ -8,8 +8,15 @@ import { CheckTeamAmount } from "@/app/api/isApplication/checkTeamAmount";
 import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { CloudStorageService } from "@/util/StorageService";
 import { detectImageType, MAX_LOGO_SIZE, DetectedImage } from "@/util/ImageValidator";
-import { generateSalt, hashPassword, MIN_PASSWORD_LENGTH } from "@/util/Argon2Service";
+import {
+    generateSalt,
+    hashPassword,
+    MAX_PASSWORD_LENGTH,
+    MIN_PASSWORD_LENGTH,
+} from "@/util/Argon2Service";
 import { withTeamLocks } from "@/util/TeamAuth";
+import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
+import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import {
     extractFormString,
     hasDuplicateSheetName,
@@ -31,7 +38,15 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
-            const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
+            const rate = checkRateLimit("register", extractClientIp(req), 10, 60_000);
+            if (!rate.allowed) {
+                return {
+                    status: 429,
+                    body: { message: "リクエストが多すぎます。少し待ってから再度お試しください" },
+                };
+            }
+
+            const { REGISTER_SHEET_ID } = process.env;
 
             // (1) 早期サイズチェック（formData() の前）
             const contentLength = Number(req.headers.get("content-length") ?? 0);
@@ -75,6 +90,12 @@ export async function POST(req: NextRequest) {
                 return {
                     status: 400,
                     body: { message: `パスワードは${MIN_PASSWORD_LENGTH}文字以上で入力してください` },
+                };
+            }
+            if (password.length > MAX_PASSWORD_LENGTH) {
+                return {
+                    status: 400,
+                    body: { message: `パスワードは${MAX_PASSWORD_LENGTH}文字以内で入力してください` },
                 };
             }
 
@@ -128,9 +149,12 @@ export async function POST(req: NextRequest) {
                 sendProgress?.("チーム情報の確認", 5);
 
                 // 提出期限・募集上限チェック
-                const checkTime = await CheckTime();
-                const checkTeamAmount = await CheckTeamAmount();
-                const isIgnore = await IsIgnore();
+                const [checkTime, checkTeamAmount, isIgnore, appSettings] = await Promise.all([
+                    CheckTime(),
+                    CheckTeamAmount(),
+                    IsIgnore(),
+                    getCachedAppSettings(),
+                ]);
                 if (!(isIgnore || (checkTime && checkTeamAmount))) {
                     return {
                         status: 503,
@@ -144,16 +168,7 @@ export async function POST(req: NextRequest) {
                 const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
 
                 // チーム数上限チェック
-                const settingsBook = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
-                const settingsSheet = await settingsBook.getSheet("maxTeamAmount");
-                await settingsSheet.loadCells({
-                    startRowIndex: 0,
-                    endRowIndex: 2,
-                    startColumnIndex: 0,
-                    endColumnIndex: 2,
-                });
-                const MAX_TEAM_AMOUNT = Number(settingsSheet.getCell(1, 0).value?.toString() ?? "0");
-                if (!isIgnore && validSheetNames.length >= MAX_TEAM_AMOUNT) {
+                if (!isIgnore && validSheetNames.length >= appSettings.maxTeamAmount) {
                     return {
                         status: 503,
                         body: { message: "募集チーム数が上限に達したため締め切りました" },
@@ -198,25 +213,8 @@ export async function POST(req: NextRequest) {
                           teamMemberWinRate.length
                         : 0;
 
-                // ロゴ保存先ディレクトリの取得 (logo_directory シート)
-                let logoDirectory = "logos";
-                try {
-                    const logoDirSheet = await settingsBook.getSheet("logo_directory");
-                    if (logoDirSheet) {
-                        await logoDirSheet.loadCells({
-                            startRowIndex: 0,
-                            endRowIndex: 2,
-                            startColumnIndex: 0,
-                            endColumnIndex: 1,
-                        });
-                        const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
-                        if (dirVal) {
-                            logoDirectory = dirVal;
-                        }
-                    }
-                } catch (e) {
-                    logServerError("POST /api/register logo_directory", e);
-                }
+                // ロゴ保存先ディレクトリの取得 (AppSettingsCache)
+                const logoDirectory = appSettings.logoDirectory;
 
                 // (3) アップロード → シート書き込み（失敗時はGCS＋シート双方をロールバック）
                 const storage = new CloudStorageService();
@@ -266,6 +264,7 @@ export async function POST(req: NextRequest) {
                     // spreadsheetへの情報書き込み (RAW モード)
                     createdSheet = await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
                     await spreadSheet.addRows(teamNickName, sheetRows, { raw: true });
+                    invalidateRegisterSheetNamesCache();
                 } catch (e) {
                     if (createdSheet) {
                         try {
