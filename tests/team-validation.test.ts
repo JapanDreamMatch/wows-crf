@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+    COMMENT_MAX_LENGTH,
+    CONTACT_MAX_LENGTH,
     TEAM_NAME_MAX_LENGTH,
     TEAM_NICKNAME_MAX_LENGTH,
     TEAM_NICKNAME_MIN_LENGTH,
+    extractFormString,
+    hasDuplicateSheetName,
+    validateComment,
+    validateContact,
+    validatePlayerIgn,
+    validatePlayerRoster,
     validateTeamName,
     validateTeamNickName,
 } from "@/util/TeamValidation";
@@ -54,6 +62,71 @@ describe("TeamValidation", () => {
             expect(validateTeamNickName("A B")).not.toBeNull();
             expect(validateTeamNickName("=CMD")).not.toBeNull();
             expect(validateTeamNickName("あいう")).not.toBeNull();
+        });
+    });
+
+    describe("validateContact & validateComment", () => {
+        it("requires non-empty contact within length limit and allows '@' handles", () => {
+            expect(validateContact("@captain_discord")).toBeNull();
+            expect(validateContact("")).not.toBeNull();
+            expect(validateContact("   ")).not.toBeNull();
+            expect(validateContact("a".repeat(CONTACT_MAX_LENGTH + 1))).not.toBeNull();
+            expect(validateContact("=SUM(1,2)")).not.toBeNull();
+        });
+
+        it("allows empty comment and rejects oversized or formula-prefixed comments", () => {
+            expect(validateComment("")).toBeNull();
+            expect(validateComment("よろしくお願いします")).toBeNull();
+            expect(validateComment("a".repeat(COMMENT_MAX_LENGTH + 1))).not.toBeNull();
+            expect(validateComment(" =1+1")).not.toBeNull();
+        });
+    });
+
+    describe("validatePlayerIgn & validatePlayerRoster", () => {
+        it("validates IGN format and length", () => {
+            expect(validatePlayerIgn("Player_01", true)).toBeNull();
+            expect(validatePlayerIgn("", false)).toBeNull();
+            expect(validatePlayerIgn("", true)).not.toBeNull();
+            expect(validatePlayerIgn("ab", true)).not.toBeNull();
+            expect(validatePlayerIgn("bad-name!", true)).not.toBeNull();
+        });
+
+        it("rejects duplicate IGNs case-insensitively and requires players 1..7", () => {
+            const validRoster = [
+                "Player_1", "Player_2", "Player_3", "Player_4",
+                "Player_5", "Player_6", "Player_7", "", "", "",
+            ];
+            expect(validatePlayerRoster(validRoster)).toBeNull();
+
+            const dupRoster = [
+                "Player_1", "player_1", "Player_3", "Player_4",
+                "Player_5", "Player_6", "Player_7", "", "", "",
+            ];
+            expect(validatePlayerRoster(dupRoster)).not.toBeNull();
+
+            const missingReq = [
+                "Player_1", "Player_2", "Player_3", "Player_4",
+                "Player_5", "Player_6", "", "Player_8", "", "",
+            ];
+            expect(validatePlayerRoster(missingReq)).not.toBeNull();
+        });
+    });
+
+    describe("extractFormString & hasDuplicateSheetName", () => {
+        it("rejects File values submitted in string form fields", () => {
+            const fd = new FormData();
+            fd.append("password", new File(["x"], "x.txt"));
+            fd.append("teamName", "Valid Team");
+            expect(extractFormString(fd, "password")).toEqual({ ok: false });
+            expect(extractFormString(fd, "teamName")).toEqual({ ok: true, value: "Valid Team" });
+            expect(extractFormString(fd, "missing")).toEqual({ ok: true, value: "" });
+        });
+
+        it("checks duplicate team nicknames case-insensitively while ignoring '@' sheets", () => {
+            const sheets = ["@init", "JDM", "Alpha"];
+            expect(hasDuplicateSheetName(sheets, "jdm")).toBe(true);
+            expect(hasDuplicateSheetName(sheets, "init")).toBe(false);
+            expect(hasDuplicateSheetName(sheets, "BETA")).toBe(false);
         });
     });
 });

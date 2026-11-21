@@ -63,4 +63,20 @@ describe("TeamAuth In-Memory Concurrency Locks", () => {
         expect(await withTeamLock("OLD_T", async () => "ok")).toEqual({ locked: false, result: "ok" });
         expect(await withTeamLock("NEW_T", async () => "ok")).toEqual({ locked: false, result: "ok" });
     });
+
+    it("normalizes lock keys case-insensitively so 'jdm' and 'JDM' cannot run concurrently", async () => {
+        let releaseLock!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            releaseLock = resolve;
+        });
+
+        const active = withTeamLock("JDM", async () => {
+            await gate;
+            return "done";
+        });
+
+        expect(await withTeamLock("jdm", async () => "bypass")).toEqual({ locked: true });
+        releaseLock();
+        expect(await active).toEqual({ locked: false, result: "done" });
+    });
 });

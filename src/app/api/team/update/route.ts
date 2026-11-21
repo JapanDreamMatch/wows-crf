@@ -8,7 +8,18 @@ import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
 import { CloudStorageService } from "@/util/StorageService";
 import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
-import { validateTeamName, validateTeamNickName } from "@/util/TeamValidation";
+import {
+    extractFormString,
+    hasDuplicateSheetName,
+    MAX_PLAYER_COUNT,
+    validateComment,
+    validateContact,
+    validatePlayerRoster,
+    validateTeamName,
+    validateTeamNickName,
+} from "@/util/TeamValidation";
+import { assertSafeSheetCellString, setCellStringSafe } from "@/util/SpreadsheetSanitizer";
+import { logServerError } from "@/util/SafeLogger";
 
 /**
  * 既存の公開URLからGCSオブジェクト名を抽出する（拡張子変更時の旧ファイル削除用）
@@ -72,13 +83,13 @@ function buildRecreatedSheetRows(params: {
     const rows: Record<string, string | number | boolean>[] = [
         {
             Type: "TeamInfo",
-            IGN: params.teamNickName,
-            ID: params.teamName,
+            IGN: assertSafeSheetCellString(params.teamNickName),
+            ID: assertSafeSheetCellString(params.teamName),
             WinRate: params.teamWinRate,
-            Contact: params.contact,
-            Comment: params.comment,
-            LogoURL: params.logoUrl,
-            SaltAndHash: params.salt,
+            Contact: assertSafeSheetCellString(params.contact),
+            Comment: assertSafeSheetCellString(params.comment),
+            LogoURL: assertSafeSheetCellString(params.logoUrl),
+            SaltAndHash: assertSafeSheetCellString(params.salt),
         },
     ];
 
@@ -87,7 +98,7 @@ function buildRecreatedSheetRows(params: {
         const ign = p.getIgn();
         const row: Record<string, string | number | boolean> = {
             Type: `player${i + 1}`,
-            IGN: ign,
+            IGN: assertSafeSheetCellString(ign),
             ID: ign ? (p.getUid() ?? "undefined") : "",
             WinRate: ign ? (p.getWinRate() ?? "undefined") : "",
         };
@@ -122,28 +133,57 @@ export async function POST(req: NextRequest) {
 
             const formData = await req.formData();
 
-            const teamNickName = (
-                (formData.get("teamNickName") ?? formData.get("teamNickname") ?? "") as string
-            ).trim();
-            const rawNewNickName = formData.get("newTeamNickName");
+            const nickKey = formData.get("teamNickName") !== null ? "teamNickName" : "teamNickname";
+            const teamNickField = extractFormString(formData, nickKey);
+            const newNickField = extractFormString(formData, "newTeamNickName");
+            const teamNameField = extractFormString(formData, "teamName");
+            const passwordField = extractFormString(formData, "password");
+            const contactField = extractFormString(formData, "contact");
+            const commentField = extractFormString(formData, "comment");
+
+            if (
+                !teamNickField.ok ||
+                !newNickField.ok ||
+                !teamNameField.ok ||
+                !passwordField.ok ||
+                !contactField.ok ||
+                !commentField.ok
+            ) {
+                return { status: 400, body: { message: "入力データの形式が不正です" } };
+            }
+
+            const igns: string[] = [];
+            for (let i = 1; i <= MAX_PLAYER_COUNT; i++) {
+                const playerField = extractFormString(formData, `player${i}`);
+                if (!playerField.ok) {
+                    return { status: 400, body: { message: `出場者${i}の形式が不正です` } };
+                }
+                igns.push(playerField.value.trim());
+            }
+
+            const teamNickName = teamNickField.value.trim();
+            const hasExplicitNewNick = formData.get("newTeamNickName") !== null;
             const newTeamNickName =
-                typeof rawNewNickName === "string" && rawNewNickName.trim() !== ""
-                    ? rawNewNickName.trim()
-                    : typeof rawNewNickName === "string"
+                hasExplicitNewNick && newNickField.value.trim() !== ""
+                    ? newNickField.value.trim()
+                    : hasExplicitNewNick
                         ? ""
                         : teamNickName;
-            const rawTeamName = formData.get("teamName");
-            const teamName = typeof rawTeamName === "string" ? rawTeamName.trim() : "";
-            const password = (formData.get("password") ?? "") as string;
+            const teamName = teamNameField.value.trim();
+            const password = passwordField.value;
+            const contact = contactField.value.trim();
+            const comment = commentField.value.trim();
 
-            // チーム名・チーム略名のバリデーション
-            const teamNameErr = validateTeamName(teamName);
-            if (teamNameErr) {
-                return { status: 400, body: { message: teamNameErr } };
-            }
-            const newNickErr = validateTeamNickName(newTeamNickName);
-            if (newNickErr) {
-                return { status: 400, body: { message: newNickErr } };
+            // 全テキストフィールド・ロスターのサーバーサイドバリデーション
+            const validationErrors = [
+                validateTeamName(teamName),
+                validateTeamNickName(newTeamNickName),
+                validateContact(contact),
+                validateComment(comment),
+                validatePlayerRoster(igns),
+            ].filter((e): e is string => Boolean(e));
+            if (validationErrors.length > 0) {
+                return { status: 400, body: { message: validationErrors[0] } };
             }
 
             // (2) 画像検証
@@ -203,31 +243,13 @@ export async function POST(req: NextRequest) {
                     ? new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "")
                     : null;
 
-                // 略名変更時は新しい略名の重複チェックを Player API 呼び出し前に実施
+                // 略名変更時は新しい略名の重複チェックを Player API 呼び出し前に実施（大文字小文字非区別）
                 if (isNickChanged && spreadSheet) {
                     const sheetNames = await spreadSheet.getSheetNames();
-                    const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
-                    if (validSheetNames.includes(newTeamNickName)) {
+                    if (hasDuplicateSheetName(sheetNames, newTeamNickName)) {
                         return {
                             status: 409,
                             body: { message: "このチーム略名は既に登録されています" },
-                        };
-                    }
-                }
-
-                const contact = (formData.get("contact") ?? "") as string;
-                const comment = (formData.get("comment") ?? "") as string;
-                const igns: string[] = [];
-                for (let i = 1; i <= 10; i++) {
-                    igns.push(((formData.get(`player${i}`) ?? "") as string).trim());
-                }
-
-                // 必須プレイヤー (player1 〜 player7) のチェック
-                for (let i = 0; i < 7; i++) {
-                    if (!igns[i]) {
-                        return {
-                            status: 400,
-                            body: { message: `出場者${i + 1}を入力してください` },
                         };
                     }
                 }
@@ -236,7 +258,17 @@ export async function POST(req: NextRequest) {
                 const players: Player[] = [];
                 for (let i = 0; i < igns.length; i++) {
                     sendProgress?.(`出場者${i + 1}の確認`, 10 + i * 7);
+                    if (!igns[i]) {
+                        players.push(new Player(""));
+                        continue;
+                    }
                     const p = await new Player(igns[i]).getInstance();
+                    if (!p.getUid()) {
+                        return {
+                            status: 400,
+                            body: { message: `出場者${i + 1}（${igns[i]}）がWargamingアカウントで確認できませんでした` },
+                        };
+                    }
                     players.push(p);
                 }
 
@@ -280,12 +312,12 @@ export async function POST(req: NextRequest) {
                     if (!isNickChanged) {
                         const { sheet } = auth;
                         // Row 2 (index 1: TeamInfo) の更新（B2 チーム略名・H列 Salt/Hash/Lock は維持）
-                        sheet.getCell(1, 2).value = teamName;    // C2: チーム名
-                        sheet.getCell(1, 3).value = teamWinRate; // D2: WinRate
-                        sheet.getCell(1, 4).value = contact;     // E2: Contact
-                        sheet.getCell(1, 5).value = comment;     // F2: Comment
+                        setCellStringSafe(sheet.getCell(1, 2), teamName);  // C2: チーム名
+                        sheet.getCell(1, 3).numberValue = teamWinRate;     // D2: WinRate
+                        setCellStringSafe(sheet.getCell(1, 4), contact);   // E2: Contact
+                        setCellStringSafe(sheet.getCell(1, 5), comment);   // F2: Comment
                         if (logoResult) {
-                            sheet.getCell(1, 6).value = `${logoResult.url}?v=${Date.now()}`; // G2: LogoURL
+                            setCellStringSafe(sheet.getCell(1, 6), `${logoResult.url}?v=${Date.now()}`); // G2: LogoURL
                         }
 
                         // Row 3〜12 (index 2〜11: player1〜player10) の更新
@@ -293,10 +325,24 @@ export async function POST(req: NextRequest) {
                             const rowIndex = 2 + i;
                             const p = players[i];
                             const ign = p.getIgn();
-                            sheet.getCell(rowIndex, 0).value = `player${i + 1}`;
-                            sheet.getCell(rowIndex, 1).value = ign;
-                            sheet.getCell(rowIndex, 2).value = ign ? (p.getUid() ?? "undefined") : "";
-                            sheet.getCell(rowIndex, 3).value = ign ? (p.getWinRate() ?? "undefined") : "";
+                            setCellStringSafe(sheet.getCell(rowIndex, 0), `player${i + 1}`);
+                            setCellStringSafe(sheet.getCell(rowIndex, 1), ign);
+
+                            const uid = p.getUid();
+                            const idCell = sheet.getCell(rowIndex, 2);
+                            if (ign && typeof uid === "number" && Number.isFinite(uid)) {
+                                idCell.numberValue = uid;
+                            } else {
+                                setCellStringSafe(idCell, ign ? String(uid ?? "undefined") : "");
+                            }
+
+                            const wr = p.getWinRate();
+                            const wrCell = sheet.getCell(rowIndex, 3);
+                            if (ign && typeof wr === "number" && Number.isFinite(wr)) {
+                                wrCell.numberValue = wr;
+                            } else {
+                                setCellStringSafe(wrCell, ign ? "undefined" : "");
+                            }
                         }
 
                         await sheet.saveUpdatedCells();
@@ -318,26 +364,26 @@ export async function POST(req: NextRequest) {
                         });
 
                         createdSheet = await spreadSheet.addSheet(newTeamNickName, REGISTER_HEADER);
-                        await createdSheet.addRows(sheetRows);
+                        await createdSheet.addRows(sheetRows, { raw: true });
                         await auth.sheet.delete();
-                    }
-
-                    // 略名変更や拡張子変更等で旧ロゴと別オブジェクトになった場合、旧ロゴを削除
-                    if (logoResult && prevObjectName && prevObjectName !== logoResult.objectName) {
-                        await storage.deleteObject(prevObjectName);
                     }
                 } catch (e) {
                     if (createdSheet) {
                         try {
                             await createdSheet.delete();
                         } catch (rollbackErr) {
-                            console.error("failed to rollback recreated sheet:", newTeamNickName, rollbackErr);
+                            logServerError("POST /api/team/update rollback sheet", rollbackErr);
                         }
                     }
                     if (createdNewLogo && logoResult) {
                         await storage.deleteObject(logoResult.objectName);
                     }
                     throw e;
+                }
+
+                // 略名変更や拡張子変更等で旧ロゴと別オブジェクトになった場合、シート反映後に旧ロゴを削除
+                if (logoResult && prevObjectName && prevObjectName !== logoResult.objectName) {
+                    await storage.deleteObject(prevObjectName);
                 }
 
                 sendProgress?.("更新完了", 100);
@@ -359,11 +405,11 @@ export async function POST(req: NextRequest) {
             }
 
             return lockedExec.result;
-        } catch (error: any) {
-            console.error(error);
+        } catch (error: unknown) {
+            logServerError("POST /api/team/update", error);
             return {
                 status: 500,
-                body: { message: error?.message ?? "更新処理中にエラーが発生しました" },
+                body: { message: "更新処理中にエラーが発生しました" },
             };
         }
     };

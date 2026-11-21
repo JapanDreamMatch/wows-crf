@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ARGON2_CONFIG, MIN_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { MAX_LOGO_SIZE } from "@/util/ImageValidator";
 import { REGISTER_HEADER, REGISTER_PERIOD } from "@/util/SheetHeader";
 import { MAX_URL_SHIPS } from "@/util/ShipCheckerQuery";
+import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { LOCK_DURATION_MS, MAX_AUTH_FAILURES } from "@/util/TeamAuth";
 
 describe("Security & Spreadsheet Contract Invariants", () => {
@@ -41,5 +42,21 @@ describe("Security & Spreadsheet Contract Invariants", () => {
     it("Upload and URL query DoS limits are strictly bounded", () => {
         expect(MAX_LOGO_SIZE).toBe(20 * 1024 * 1024);
         expect(MAX_URL_SHIPS).toBe(30);
+    });
+
+    it("GoogleSpreadsheetService.addRows enforces raw: true by default to prevent formula injection", async () => {
+        const service = new GoogleSpreadsheetService("dummy-sheet-id");
+        const mockAddRows = vi.fn().mockResolvedValue([]);
+        (service as unknown as { doc: { sheetsByTitle: Record<string, unknown> } }).doc = {
+            sheetsByTitle: {
+                JDM: { addRows: mockAddRows },
+            },
+        };
+
+        await service.addRows("JDM", [{ Type: "TeamInfo", IGN: "JDM" }]);
+        expect(mockAddRows).toHaveBeenCalledWith(
+            [{ Type: "TeamInfo", IGN: "JDM" }],
+            { raw: true },
+        );
     });
 });

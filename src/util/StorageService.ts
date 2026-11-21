@@ -1,5 +1,16 @@
 import { Storage } from '@google-cloud/storage';
 import type { DetectedImage } from '@/util/ImageValidator';
+import { validateTeamNickName } from '@/util/TeamValidation';
+
+const SAFE_FOLDER_PATTERN = /^[a-zA-Z0-9/_-]+$/;
+
+function sanitizeLogoFolderName(folderName: string): string {
+    const cleaned = folderName.replace(/^\/+|\/+$/g, '').trim();
+    if (!cleaned || cleaned.includes('..') || !SAFE_FOLDER_PATTERN.test(cleaned)) {
+        return 'logos';
+    }
+    return cleaned;
+}
 
 export class CloudStorageService {
     private storage: Storage;
@@ -43,8 +54,13 @@ export class CloudStorageService {
         teamNickName: string,
         folderName: string = 'logos'
     ): Promise<{ objectName: string; url: string }> {
-        const sanitizedFolder = folderName.replace(/^\/+|\/+$/g, '').trim() || 'logos';
-        const objectName = `${sanitizedFolder}/${teamNickName}.${image.ext}`;
+        const nickErr = validateTeamNickName(teamNickName);
+        if (nickErr) {
+            throw new Error(`Invalid teamNickName for upload: ${nickErr}`);
+        }
+        const safeNick = teamNickName.trim();
+        const sanitizedFolder = sanitizeLogoFolderName(folderName);
+        const objectName = `${sanitizedFolder}/${safeNick}.${image.ext}`;
 
         await this.storage.bucket(this.bucketName).file(objectName).save(buffer, {
             contentType: image.mime,          // 申告値ではなく判定結果
@@ -70,12 +86,20 @@ export class CloudStorageService {
         srcObjectName: string,
         newTeamNickName: string
     ): Promise<{ objectName: string; url: string }> {
+        const nickErr = validateTeamNickName(newTeamNickName);
+        if (nickErr) {
+            throw new Error(`Invalid newTeamNickName for copy: ${nickErr}`);
+        }
+        if (!srcObjectName || srcObjectName.includes('..')) {
+            throw new Error('Invalid source object name');
+        }
+        const safeNewNick = newTeamNickName.trim();
         const lastSlash = srcObjectName.lastIndexOf('/');
         const dir = lastSlash >= 0 ? srcObjectName.slice(0, lastSlash) : '';
         const baseName = lastSlash >= 0 ? srcObjectName.slice(lastSlash + 1) : srcObjectName;
         const lastDot = baseName.lastIndexOf('.');
         const ext = lastDot > 0 ? baseName.slice(lastDot) : '';
-        const newObjectName = dir ? `${dir}/${newTeamNickName}${ext}` : `${newTeamNickName}${ext}`;
+        const newObjectName = dir ? `${dir}/${safeNewNick}${ext}` : `${safeNewNick}${ext}`;
 
         if (newObjectName === srcObjectName) {
             return {

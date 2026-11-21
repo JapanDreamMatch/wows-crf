@@ -2,6 +2,7 @@ import { timingSafeEqual } from "crypto";
 import { GoogleSpreadsheetWorksheet } from "google-spreadsheet";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { hashPassword } from "@/util/Argon2Service";
+import { logServerError } from "@/util/SafeLogger";
 
 export const MAX_AUTH_FAILURES = 10;
 export const LOCK_DURATION_MS = 60 * 60 * 1000; // 1時間
@@ -46,7 +47,7 @@ export async function withTeamLocks<T>(
     fn: () => Promise<T>
 ): Promise<{ locked: true } | { locked: false; result: T }> {
     const keys = Array.from(
-        new Set(teamNickNames.map((name) => name.trim()).filter(Boolean))
+        new Set(teamNickNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
     ).sort();
 
     if (keys.some((key) => processingTeams.has(key))) {
@@ -228,19 +229,28 @@ export async function authenticateTeamUnlocked(
         await sheet.saveUpdatedCells();
     }
 
-    // シートから現在のチームデータを抽出
+    // シートから現在のチームデータを抽出（数式セルが混入していた場合は評価結果を返却しない）
+    const readSafeCellString = (row: number, col: number, fallback = ""): string => {
+        const cell = sheet.getCell(row, col);
+        if (cell.formula) {
+            logServerError("TeamAuth.readSafeCellString", `Formula detected in cell (${row}, ${col})`);
+            return "";
+        }
+        return cell.value?.toString() ?? fallback;
+    };
+
     const players: string[] = [];
     for (let i = 0; i < 10; i++) {
-        const rawIgn = sheet.getCell(2 + i, 1).value?.toString()?.trim() ?? "";
+        const rawIgn = readSafeCellString(2 + i, 1).trim();
         players.push(rawIgn === "undefined" ? "" : rawIgn);
     }
 
     const teamData: TeamData = {
-        teamNickName: sheet.getCell(1, 1).value?.toString() ?? trimmedNick,
-        teamName: sheet.getCell(1, 2).value?.toString() ?? "",
-        contact: sheet.getCell(1, 4).value?.toString() ?? "",
-        comment: sheet.getCell(1, 5).value?.toString() ?? "",
-        logoUrl: sheet.getCell(1, 6).value?.toString() ?? "",
+        teamNickName: readSafeCellString(1, 1, trimmedNick),
+        teamName: readSafeCellString(1, 2),
+        contact: readSafeCellString(1, 4),
+        comment: readSafeCellString(1, 5),
+        logoUrl: readSafeCellString(1, 6),
         players,
     };
 
