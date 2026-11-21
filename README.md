@@ -28,7 +28,7 @@ JDM用に出場艦艇チェッカーとか入れてますが、その辺除け�
 ※`create-next-app`で作成した際に導入されたものを除く
 - [chakra-ui](https://v2.chakra-ui.com/getting-started)
 - [react-hook-form](https://www.react-hook-form.com/api/)
-- yup
+  - ※ クライアント側の検証は React Hook Form 標準の `validate`、サーバー側の検証は `src/util/TeamValidation.ts` へ統一したため、`yup` および `@hookform/resolvers` は廃止しました。
 - axios
 - @google-cloud/storage
 - google-auth-library
@@ -49,8 +49,11 @@ WOWS_API_APP_ID="appid"
 SHIP_AND_RULES_SHEET_ID=''
 # 任意: /api/shipchecker のサーバー側キャッシュ有効秒数（デフォルト: 300、0 で無効化）
 SHIPCHECKER_CACHE_TTL_SECONDS='300'
+# 任意: 同一ホスト以外の許可オリジン（プレビューURL等を併用する場合のみカンマ区切りで指定、通常は未設定）
+# ALLOWED_ORIGINS='https://example.com'
 ```
-※ 従来の `DRIVE_FOLDER_ID`（Google Drive）は廃止され、Cloud Storage（`GCS_BUCKET_NAME`）に移行しました。
+※ 従来の `DRIVE_FOLDER_ID`（Google Drive）は廃止され、Cloud Storage（`GCS_BUCKET_NAME`）に移行しました（本番環境では `GCS_BUCKET_NAME` の明示設定が必須です）。  
+※ 本番環境の GCP Cloud Run では、インメモリ排他ロック・キャッシュ・レート制限の整合性を保つため、**インスタンスの最大数（`--max-instances`）を `1`** に設定してください。
 
 # Google Cloud Storage (チームロゴ保存先) の設定
 1. GCP コンソールで Cloud Storage バケット（例: `jdm-team-icon`）を作成
