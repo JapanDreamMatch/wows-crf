@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bytesToHex, generateSalt, hashPassword, hexToBytes } from "@/util/Argon2Service";
+import {
+    MAX_PASSWORD_LENGTH,
+    bytesToHex,
+    generateSalt,
+    hashPassword,
+    hexToBytes,
+} from "@/util/Argon2Service";
 
 describe("Argon2Service", () => {
     it("generateSalt produces a unique 32-character lowercase hex string (16 bytes)", () => {
@@ -41,5 +47,11 @@ describe("Argon2Service", () => {
         expect(hash1).toBe(hash2);
         expect(hash1).not.toBe(hashDifferentPassword);
         expect(hash1).not.toBe(hashDifferentSalt);
+    });
+
+    it("rejects passwords exceeding MAX_PASSWORD_LENGTH to prevent Argon2id CPU/memory DoS", async () => {
+        const salt = "00112233445566778899aabbccddeeff";
+        const oversized = "a".repeat(MAX_PASSWORD_LENGTH + 1);
+        await expect(hashPassword(oversized, salt)).rejects.toThrow();
     });
 });

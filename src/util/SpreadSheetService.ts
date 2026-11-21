@@ -59,11 +59,15 @@ export class GoogleSpreadsheetService {
      *  );
      * </code>
      */
-    async addRows(sheetTitle: string, values: (string[] | Record<string, string | number | boolean>)[]) {
+    async addRows(
+        sheetTitle: string,
+        values: (string[] | Record<string, string | number | boolean>)[],
+        options: { raw?: boolean; insert?: boolean } = { raw: true }
+    ) {
         const sheet = this.doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) { return; }
-        await sheet.addRows(values);
+        await sheet.addRows(values, { ...options, raw: options.raw ?? true });
     }
 
     /**

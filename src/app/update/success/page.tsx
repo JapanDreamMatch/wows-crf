@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Box, Button, Heading, Text, VStack } from "@chakra-ui/react";
+import { validateTeamNickName } from "@/util/TeamValidation";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,13 @@ interface UpdateSuccessPageProps {
 export default async function UpdateSuccessPage({ searchParams }: UpdateSuccessPageProps) {
     const resolvedParams = await searchParams;
     const nickChanged = resolvedParams.nickChanged === "1";
-    const newNickName =
+    const rawNewNickName =
         typeof resolvedParams.newNickName === "string"
             ? resolvedParams.newNickName.trim()
+            : "";
+    const newNickName =
+        rawNewNickName && validateTeamNickName(rawNewNickName) === null
+            ? rawNewNickName
             : "";
 
     return (

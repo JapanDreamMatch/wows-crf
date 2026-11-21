@@ -6,54 +6,30 @@ import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { Player } from "@/util/Player";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
-import { CloudStorageService } from "@/util/StorageService";
-import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
-import { validateTeamName, validateTeamNickName } from "@/util/TeamValidation";
-
-/**
- * 既存の公開URLからGCSオブジェクト名を抽出する（拡張子変更時の旧ファイル削除用）
- */
-function extractObjectNameFromUrl(url: string): string | null {
-    if (!url) return null;
-    try {
-        const parsed = new URL(url);
-        // https://storage.googleapis.com/{bucketName}/{objectName}
-        const parts = parsed.pathname.split("/").filter(Boolean);
-        if (parts.length < 2) return null;
-        return parts
-            .slice(1)
-            .map((p) => decodeURIComponent(p))
-            .join("/");
-    } catch {
-        return null;
-    }
-}
-
-/**
- * API設定シートからロゴ保存先ディレクトリ名を取得する
- */
-async function resolveLogoDirectory(apiSettingsSheetId: string): Promise<string> {
-    let logoDirectory = "logos";
-    try {
-        const settingsBook = new GoogleSpreadsheetService(apiSettingsSheetId);
-        const logoDirSheet = await settingsBook.getSheet("logo_directory");
-        if (logoDirSheet) {
-            await logoDirSheet.loadCells({
-                startRowIndex: 0,
-                endRowIndex: 2,
-                startColumnIndex: 0,
-                endColumnIndex: 1,
-            });
-            const dirVal = logoDirSheet.getCell(1, 0).value?.toString()?.trim();
-            if (dirVal) {
-                logoDirectory = dirVal;
-            }
-        }
-    } catch (e) {
-        console.warn("Failed to load logo_directory setting, fallback to 'logos':", e);
-    }
-    return logoDirectory;
-}
+import { CloudStorageService, extractObjectNameFromUrl } from "@/util/StorageService";
+import {
+    detectImageType,
+    DetectedImage,
+    MAX_LOGO_SIZE,
+    validateImageDimensions,
+} from "@/util/ImageValidator";
+import { MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
+import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
+import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
+import { readFormDataWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
+import {
+    extractFormString,
+    hasDuplicateSheetName,
+    MAX_PLAYER_COUNT,
+    validateComment,
+    validateContact,
+    validatePlayerRoster,
+    validateTeamName,
+    validateTeamNickName,
+} from "@/util/TeamValidation";
+import { assertSafeSheetCellString, setCellStringSafe } from "@/util/SpreadsheetSanitizer";
+import { logServerError } from "@/util/SafeLogger";
 
 /**
  * チームシート新規作成用の行データを組み立てる
@@ -72,13 +48,13 @@ function buildRecreatedSheetRows(params: {
     const rows: Record<string, string | number | boolean>[] = [
         {
             Type: "TeamInfo",
-            IGN: params.teamNickName,
-            ID: params.teamName,
+            IGN: assertSafeSheetCellString(params.teamNickName),
+            ID: assertSafeSheetCellString(params.teamName),
             WinRate: params.teamWinRate,
-            Contact: params.contact,
-            Comment: params.comment,
-            LogoURL: params.logoUrl,
-            SaltAndHash: params.salt,
+            Contact: assertSafeSheetCellString(params.contact),
+            Comment: assertSafeSheetCellString(params.comment),
+            LogoURL: assertSafeSheetCellString(params.logoUrl),
+            SaltAndHash: assertSafeSheetCellString(params.salt),
         },
     ];
 
@@ -87,7 +63,7 @@ function buildRecreatedSheetRows(params: {
         const ign = p.getIgn();
         const row: Record<string, string | number | boolean> = {
             Type: `player${i + 1}`,
-            IGN: ign,
+            IGN: assertSafeSheetCellString(ign),
             ID: ign ? (p.getUid() ?? "undefined") : "",
             WinRate: ign ? (p.getWinRate() ?? "undefined") : "",
         };
@@ -109,44 +85,95 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
-            const { REGISTER_SHEET_ID, API_SETTINGS_SHEET_ID } = process.env;
+            const originCheck = verifySameOriginRequest(req);
+            if (!originCheck.ok) {
+                return { status: originCheck.status, body: { message: originCheck.message } };
+            }
 
-            // (1) 早期サイズチェック
-            const contentLength = Number(req.headers.get("content-length") ?? 0);
-            if (contentLength > MAX_LOGO_SIZE + 1024 * 1024) {
+            const rate = checkRateLimit("team-update", extractClientIp(req), 15, 60_000);
+            if (!rate.allowed) {
                 return {
-                    status: 413,
-                    body: { message: "画像サイズは20MB以内である必要があります" },
+                    status: 429,
+                    body: { message: "リクエストが多すぎます。少し待ってから再度お試しください" },
                 };
             }
 
-            const formData = await req.formData();
+            // (1) 募集・変更受付期間チェック（認証や画像展開の前に実施）
+            const [checkTime, isIgnore] = await Promise.all([CheckTime(), IsIgnore()]);
+            if (!(isIgnore || checkTime)) {
+                return {
+                    status: 503,
+                    body: { message: "現在は変更受付期間ではありません" },
+                };
+            }
 
-            const teamNickName = (
-                (formData.get("teamNickName") ?? formData.get("teamNickname") ?? "") as string
-            ).trim();
-            const rawNewNickName = formData.get("newTeamNickName");
+            const { REGISTER_SHEET_ID } = process.env;
+
+            // (2) Content-Type・ストリームサイズ上限チェック（chunked 含む）
+            const formResult = await readFormDataWithLimit(req, MAX_LOGO_SIZE + 1024 * 1024);
+            if (!formResult.ok) {
+                return { status: formResult.status, body: { message: formResult.message } };
+            }
+            const formData = formResult.formData;
+
+            const nickKey = formData.get("teamNickName") !== null ? "teamNickName" : "teamNickname";
+            const teamNickField = extractFormString(formData, nickKey);
+            const newNickField = extractFormString(formData, "newTeamNickName");
+            const teamNameField = extractFormString(formData, "teamName");
+            const passwordField = extractFormString(formData, "password");
+            const contactField = extractFormString(formData, "contact");
+            const commentField = extractFormString(formData, "comment");
+
+            if (
+                !teamNickField.ok ||
+                !newNickField.ok ||
+                !teamNameField.ok ||
+                !passwordField.ok ||
+                !contactField.ok ||
+                !commentField.ok
+            ) {
+                return { status: 400, body: { message: "入力データの形式が不正です" } };
+            }
+
+            const igns: string[] = [];
+            for (let i = 1; i <= MAX_PLAYER_COUNT; i++) {
+                const playerField = extractFormString(formData, `player${i}`);
+                if (!playerField.ok) {
+                    return { status: 400, body: { message: `出場者${i}の形式が不正です` } };
+                }
+                igns.push(playerField.value.trim());
+            }
+
+            const teamNickName = teamNickField.value.trim();
+            const hasExplicitNewNick = formData.get("newTeamNickName") !== null;
             const newTeamNickName =
-                typeof rawNewNickName === "string" && rawNewNickName.trim() !== ""
-                    ? rawNewNickName.trim()
-                    : typeof rawNewNickName === "string"
+                hasExplicitNewNick && newNickField.value.trim() !== ""
+                    ? newNickField.value.trim()
+                    : hasExplicitNewNick
                         ? ""
                         : teamNickName;
-            const rawTeamName = formData.get("teamName");
-            const teamName = typeof rawTeamName === "string" ? rawTeamName.trim() : "";
-            const password = (formData.get("password") ?? "") as string;
+            const teamName = teamNameField.value.trim();
+            const password = passwordField.value;
+            const contact = contactField.value.trim();
+            const comment = commentField.value.trim();
 
-            // チーム名・チーム略名のバリデーション
-            const teamNameErr = validateTeamName(teamName);
-            if (teamNameErr) {
-                return { status: 400, body: { message: teamNameErr } };
-            }
-            const newNickErr = validateTeamNickName(newTeamNickName);
-            if (newNickErr) {
-                return { status: 400, body: { message: newNickErr } };
+            if (!password || password.length > MAX_PASSWORD_LENGTH) {
+                return { status: 401, body: { message: "パスワードが正しくありません" } };
             }
 
-            // (2) 画像検証
+            // 全テキストフィールド・ロスターのサーバーサイドバリデーション
+            const validationErrors = [
+                validateTeamName(teamName),
+                validateTeamNickName(newTeamNickName),
+                validateContact(contact),
+                validateComment(comment),
+                validatePlayerRoster(igns),
+            ].filter((e): e is string => Boolean(e));
+            if (validationErrors.length > 0) {
+                return { status: 400, body: { message: validationErrors[0] } };
+            }
+
+            // (3) 軽量な画像メタチェック（arrayBuffer 展開は認証成功後に実行）
             const logos = formData
                 .getAll("teamLogo")
                 .filter((v): v is File => typeof v === "object" && v.size > 0);
@@ -156,30 +183,18 @@ export async function POST(req: NextRequest) {
                     body: { message: "チームロゴは1枚のみ添付できます" },
                 };
             }
-            let logoBuffer: Buffer | null = null;
-            let logoType: DetectedImage | null = null;
-            if (logos.length === 1) {
-                if (logos[0].size > MAX_LOGO_SIZE) {
-                    return {
-                        status: 400,
-                        body: { message: "画像サイズは20MB以内である必要があります" },
-                    };
-                }
-                logoBuffer = Buffer.from(await logos[0].arrayBuffer());
-                logoType = detectImageType(logoBuffer);
-                if (!logoType) {
-                    return {
-                        status: 400,
-                        body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
-                    };
-                }
+            if (logos.length === 1 && logos[0].size > MAX_LOGO_SIZE) {
+                return {
+                    status: 400,
+                    body: { message: "画像サイズは20MB以内である必要があります" },
+                };
             }
 
             // 同一チーム（略名変更時は旧・新両方）の同時リクエスト排他ロック内で認証・更新を実行
             const lockedExec = await withTeamLocks([teamNickName, newTeamNickName], async () => {
                 sendProgress?.("チーム情報の確認", 5);
 
-                // (3) 認証 & シート取得
+                // (4) 認証 & シート取得
                 const auth = await authenticateTeamUnlocked(teamNickName, password);
                 if (!auth.ok) {
                     return {
@@ -188,14 +203,25 @@ export async function POST(req: NextRequest) {
                     };
                 }
 
-                // (4) 募集期間チェック
-                const checkTime = await CheckTime();
-                const isIgnore = await IsIgnore();
-                if (!(isIgnore || checkTime)) {
-                    return {
-                        status: 503,
-                        body: { message: "現在は変更受付期間ではありません" },
-                    };
+                // (5) 認証成功後に画像バイナリ・マジックナンバー検証を実施
+                let logoBuffer: Buffer | null = null;
+                let logoType: DetectedImage | null = null;
+                if (logos.length === 1) {
+                    logoBuffer = Buffer.from(await logos[0].arrayBuffer());
+                    logoType = detectImageType(logoBuffer);
+                    if (!logoType) {
+                        return {
+                            status: 400,
+                            body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
+                        };
+                    }
+                    const dimErr = validateImageDimensions(logoBuffer, logoType);
+                    if (dimErr) {
+                        return {
+                            status: 400,
+                            body: { message: dimErr },
+                        };
+                    }
                 }
 
                 const isNickChanged = newTeamNickName !== auth.teamData.teamNickName;
@@ -203,11 +229,10 @@ export async function POST(req: NextRequest) {
                     ? new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "")
                     : null;
 
-                // 略名変更時は新しい略名の重複チェックを Player API 呼び出し前に実施
+                // 略名変更時は新しい略名の重複チェックを Player API 呼び出し前に実施（大文字小文字非区別）
                 if (isNickChanged && spreadSheet) {
                     const sheetNames = await spreadSheet.getSheetNames();
-                    const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
-                    if (validSheetNames.includes(newTeamNickName)) {
+                    if (hasDuplicateSheetName(sheetNames, newTeamNickName)) {
                         return {
                             status: 409,
                             body: { message: "このチーム略名は既に登録されています" },
@@ -215,28 +240,21 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
-                const contact = (formData.get("contact") ?? "") as string;
-                const comment = (formData.get("comment") ?? "") as string;
-                const igns: string[] = [];
-                for (let i = 1; i <= 10; i++) {
-                    igns.push(((formData.get(`player${i}`) ?? "") as string).trim());
-                }
-
-                // 必須プレイヤー (player1 〜 player7) のチェック
-                for (let i = 0; i < 7; i++) {
-                    if (!igns[i]) {
-                        return {
-                            status: 400,
-                            body: { message: `出場者${i + 1}を入力してください` },
-                        };
-                    }
-                }
-
-                // (5) Wargaming API でプレイヤーの UID・勝率を取得
+                // (6) Wargaming API でプレイヤーの UID・勝率を取得
                 const players: Player[] = [];
                 for (let i = 0; i < igns.length; i++) {
                     sendProgress?.(`出場者${i + 1}の確認`, 10 + i * 7);
+                    if (!igns[i]) {
+                        players.push(new Player(""));
+                        continue;
+                    }
                     const p = await new Player(igns[i]).getInstance();
+                    if (!p.getUid()) {
+                        return {
+                            status: 400,
+                            body: { message: `出場者${i + 1}（${igns[i]}）がWargamingアカウントで確認できませんでした` },
+                        };
+                    }
                     players.push(p);
                 }
 
@@ -249,20 +267,20 @@ export async function POST(req: NextRequest) {
                           teamMemberWinRate.length
                         : 0;
 
-                // (6) ロゴ処理（新規アップロード、または略名変更に伴う既存ロゴのコピー）
+                // (7) ロゴ処理（新規アップロード、または略名変更に伴う既存ロゴのコピー）
                 const storage = new CloudStorageService();
                 let logoResult: { objectName: string; url: string } | null = null;
                 const prevLogoUrl = auth.teamData.logoUrl;
-                const prevObjectName = extractObjectNameFromUrl(prevLogoUrl);
+                const prevObjectName = extractObjectNameFromUrl(prevLogoUrl, storage.getBucketName());
 
                 if (logoBuffer && logoType) {
                     sendProgress?.("画像のアップロード", 82);
-                    const logoDirectory = await resolveLogoDirectory(API_SETTINGS_SHEET_ID ?? "");
+                    const settings = await getCachedAppSettings();
                     logoResult = await storage.uploadTeamLogo(
                         logoBuffer,
                         logoType,
                         newTeamNickName,
-                        logoDirectory
+                        settings.logoDirectory
                     );
                 } else if (isNickChanged && prevObjectName) {
                     sendProgress?.("画像の移行", 82);
@@ -280,12 +298,12 @@ export async function POST(req: NextRequest) {
                     if (!isNickChanged) {
                         const { sheet } = auth;
                         // Row 2 (index 1: TeamInfo) の更新（B2 チーム略名・H列 Salt/Hash/Lock は維持）
-                        sheet.getCell(1, 2).value = teamName;    // C2: チーム名
-                        sheet.getCell(1, 3).value = teamWinRate; // D2: WinRate
-                        sheet.getCell(1, 4).value = contact;     // E2: Contact
-                        sheet.getCell(1, 5).value = comment;     // F2: Comment
+                        setCellStringSafe(sheet.getCell(1, 2), teamName);  // C2: チーム名
+                        sheet.getCell(1, 3).numberValue = teamWinRate;     // D2: WinRate
+                        setCellStringSafe(sheet.getCell(1, 4), contact);   // E2: Contact
+                        setCellStringSafe(sheet.getCell(1, 5), comment);   // F2: Comment
                         if (logoResult) {
-                            sheet.getCell(1, 6).value = `${logoResult.url}?v=${Date.now()}`; // G2: LogoURL
+                            setCellStringSafe(sheet.getCell(1, 6), `${logoResult.url}?v=${Date.now()}`); // G2: LogoURL
                         }
 
                         // Row 3〜12 (index 2〜11: player1〜player10) の更新
@@ -293,10 +311,24 @@ export async function POST(req: NextRequest) {
                             const rowIndex = 2 + i;
                             const p = players[i];
                             const ign = p.getIgn();
-                            sheet.getCell(rowIndex, 0).value = `player${i + 1}`;
-                            sheet.getCell(rowIndex, 1).value = ign;
-                            sheet.getCell(rowIndex, 2).value = ign ? (p.getUid() ?? "undefined") : "";
-                            sheet.getCell(rowIndex, 3).value = ign ? (p.getWinRate() ?? "undefined") : "";
+                            setCellStringSafe(sheet.getCell(rowIndex, 0), `player${i + 1}`);
+                            setCellStringSafe(sheet.getCell(rowIndex, 1), ign);
+
+                            const uid = p.getUid();
+                            const idCell = sheet.getCell(rowIndex, 2);
+                            if (ign && typeof uid === "number" && Number.isFinite(uid)) {
+                                idCell.numberValue = uid;
+                            } else {
+                                setCellStringSafe(idCell, ign ? String(uid ?? "undefined") : "");
+                            }
+
+                            const wr = p.getWinRate();
+                            const wrCell = sheet.getCell(rowIndex, 3);
+                            if (ign && typeof wr === "number" && Number.isFinite(wr)) {
+                                wrCell.numberValue = wr;
+                            } else {
+                                setCellStringSafe(wrCell, ign ? "undefined" : "");
+                            }
                         }
 
                         await sheet.saveUpdatedCells();
@@ -318,26 +350,27 @@ export async function POST(req: NextRequest) {
                         });
 
                         createdSheet = await spreadSheet.addSheet(newTeamNickName, REGISTER_HEADER);
-                        await createdSheet.addRows(sheetRows);
+                        await createdSheet.addRows(sheetRows, { raw: true });
                         await auth.sheet.delete();
-                    }
-
-                    // 略名変更や拡張子変更等で旧ロゴと別オブジェクトになった場合、旧ロゴを削除
-                    if (logoResult && prevObjectName && prevObjectName !== logoResult.objectName) {
-                        await storage.deleteObject(prevObjectName);
+                        invalidateRegisterSheetNamesCache();
                     }
                 } catch (e) {
                     if (createdSheet) {
                         try {
                             await createdSheet.delete();
                         } catch (rollbackErr) {
-                            console.error("failed to rollback recreated sheet:", newTeamNickName, rollbackErr);
+                            logServerError("POST /api/team/update rollback sheet", rollbackErr);
                         }
                     }
                     if (createdNewLogo && logoResult) {
                         await storage.deleteObject(logoResult.objectName);
                     }
                     throw e;
+                }
+
+                // 略名変更や拡張子変更等で旧ロゴと別オブジェクトになった場合、シート反映後に旧ロゴを削除
+                if (logoResult && prevObjectName && prevObjectName !== logoResult.objectName) {
+                    await storage.deleteObject(prevObjectName);
                 }
 
                 sendProgress?.("更新完了", 100);
@@ -359,11 +392,11 @@ export async function POST(req: NextRequest) {
             }
 
             return lockedExec.result;
-        } catch (error: any) {
-            console.error(error);
+        } catch (error: unknown) {
+            logServerError("POST /api/team/update", error);
             return {
                 status: 500,
-                body: { message: error?.message ?? "更新処理中にエラーが発生しました" },
+                body: { message: "更新処理中にエラーが発生しました" },
             };
         }
     };

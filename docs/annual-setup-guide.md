@@ -171,7 +171,8 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 | `API_SETTINGS_SHEET_ID` | 期間・上限チーム数設定シートのID | **必須更新**（別シートにした場合） |
 | `SHIP_AND_RULES_SHEET_ID` | 艦艇チェッカールールシートのID | **必須更新**（※機能有効時） |
 | `SHIPCHECKER_CACHE_TTL_SECONDS` | `/api/shipchecker` のキャッシュ有効秒数（デフォルト: `300`、`0` でキャッシュ無効） | 任意（未設定時は300秒） |
-| `GCS_BUCKET_NAME` | ロゴ画像保存先Cloud Storageバケット名 | 原則維持（`jdm-team-icon`） |
+| `GCS_BUCKET_NAME` | ロゴ画像保存先Cloud Storageバケット名 | **本番必須明示**（原則 `jdm-team-icon`） |
+| `ALLOWED_ORIGINS` | 同一ホスト以外の許可オリジン（プレビューURL等を併用する場合のみカンマ区切りで指定） | 任意（通常は未設定） |
 | `WOWS_API_APP_ID` | Wargaming Developer Room発行のAPIキー | 原則維持（有効性確認のみ） |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | GCPサービスアカウントのメールアドレス | 原則維持 |
 | `GOOGLE_PRIVATE_KEY` | サービスアカウントの秘密鍵 | 原則維持 |
@@ -183,8 +184,9 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
 1. Google Cloud Console にログイン
 2. **Cloud Run** > 対象サービス（`wows-crf`）を開く
 3. **「新しいリビジョンの編集とデプロイ」** を選択
-4. **「コンテナ」** > **「環境変数」**（またはシークレット参照）にて、上記IDを更新
-5. **「デプロイ」** を実行して反映
+4. **「コンテナ」** > **「環境変数」**（またはシークレット参照）にて、上記IDおよび `GCS_BUCKET_NAME` を設定
+5. インメモリ排他ロック（`withTeamLocks`）・キャッシュ・レート制限の整合性を保つため、**最大インスタンス数（`--max-instances`）を `1`** に設定
+6. **「デプロイ」** を実行して反映
 
 #### ローカル開発環境（手元で確認する場合）
 1. プロジェクト直下の `.env.local` を開く
@@ -242,6 +244,10 @@ WebフォームがGoogle各リソースにアクセスできるように、GCP�
   - 日時がJST（+09:00）で正しく設定されているか確認する。
 - [ ] **上限チーム数の再確認**:
   - `maxTeamAmount` が大会要項通りの数値になっているか確認する。
+
+> [!WARNING]
+> **スプレッドシートを CSV / Excel 形式でダウンロードする場合の注意**
+> 本システムでは Google SpreadSheet 上で数式として解釈されないよう `RAW` / `stringValue` モードで書き込み、`=` 始まり入力を拒否していますが、代表者連絡先等には `@` 始まりの SNS アカウント名が登録されます。運営端末へ CSV / Excel としてダウンロードして開く場合は、Excel 側で数式として再解釈されないよう「テキストとしてインポート」または Google スプレッドシート上での閲覧を推奨します。
 
 ---
 

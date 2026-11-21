@@ -25,6 +25,7 @@ import type { TeamData } from "@/util/TeamAuth";
 import { SubmitProgressProvider } from "@/components/SubmitProgressContext";
 import SubmitProgressBox from "@/components/SubmitProgressBox";
 import { postWithProgress } from "@/util/postWithProgress";
+import { isSafeGcsLogoUrl } from "@/util/UrlValidator";
 
 interface UpdateFormValues {
     teamName: string;
@@ -376,7 +377,7 @@ export default function TeamUpdatePage() {
                                     />
 
                                     {/* 現在のチームロゴ & ロゴ変更 */}
-                                    {teamData.logoUrl && (
+                                    {teamData.logoUrl && isSafeGcsLogoUrl(teamData.logoUrl) && (
                                         <Field.Root className="p-2">
                                             <Field.Label className="pl-2 mb-1 text-sm">
                                                 現在登録されているチームロゴ

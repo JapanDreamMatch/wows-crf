@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ARGON2_CONFIG, MIN_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { MAX_LOGO_SIZE } from "@/util/ImageValidator";
 import { REGISTER_HEADER, REGISTER_PERIOD } from "@/util/SheetHeader";
 import { MAX_URL_SHIPS } from "@/util/ShipCheckerQuery";
+import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { LOCK_DURATION_MS, MAX_AUTH_FAILURES } from "@/util/TeamAuth";
+import { isSafeDiscordInviteUrl, isSafeGcsLogoUrl } from "@/util/UrlValidator";
 
 describe("Security & Spreadsheet Contract Invariants", () => {
     it("REGISTER_HEADER maintains the exact 8-column layout (A..H) for G2 LogoURL and H2..H5 Salt/Hash/Lock", () => {
@@ -41,5 +43,41 @@ describe("Security & Spreadsheet Contract Invariants", () => {
     it("Upload and URL query DoS limits are strictly bounded", () => {
         expect(MAX_LOGO_SIZE).toBe(20 * 1024 * 1024);
         expect(MAX_URL_SHIPS).toBe(30);
+    });
+
+    it("GoogleSpreadsheetService.addRows enforces raw: true by default to prevent formula injection", async () => {
+        const service = new GoogleSpreadsheetService("dummy-sheet-id");
+        const mockAddRows = vi.fn().mockResolvedValue([]);
+        (service as unknown as { doc: { sheetsByTitle: Record<string, unknown> } }).doc = {
+            sheetsByTitle: {
+                JDM: { addRows: mockAddRows },
+            },
+        };
+
+        await service.addRows("JDM", [{ Type: "TeamInfo", IGN: "JDM" }]);
+        expect(mockAddRows).toHaveBeenCalledWith(
+            [{ Type: "TeamInfo", IGN: "JDM" }],
+            { raw: true },
+        );
+
+        await service.addRows("JDM", [{ Type: "TeamInfo", IGN: "JDM" }], {
+            raw: undefined,
+            insert: true,
+        });
+        expect(mockAddRows).toHaveBeenLastCalledWith(
+            [{ Type: "TeamInfo", IGN: "JDM" }],
+            { insert: true, raw: true },
+        );
+    });
+
+    it("UrlValidator restricts Discord invites and GCS logo URLs to safe HTTPS allowlists", () => {
+        expect(isSafeDiscordInviteUrl("https://discord.gg/abc123")).toBe(true);
+        expect(isSafeDiscordInviteUrl("https://discord.com/invite/abc123")).toBe(true);
+        expect(isSafeDiscordInviteUrl("javascript:alert(1)")).toBe(false);
+        expect(isSafeDiscordInviteUrl("https://evil.example.com/invite/abc")).toBe(false);
+
+        expect(isSafeGcsLogoUrl("https://storage.googleapis.com/jdm-team-icon/logos/JDM.png")).toBe(true);
+        expect(isSafeGcsLogoUrl("http://storage.googleapis.com/jdm-team-icon/logos/JDM.png")).toBe(false);
+        expect(isSafeGcsLogoUrl("https://evil.example.com/a/b.png")).toBe(false);
     });
 });

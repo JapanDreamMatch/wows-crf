@@ -1,8 +1,9 @@
 import {Path, FieldValues, useFormContext} from "react-hook-form";
 import {Box, Field, HStack, Input} from "@chakra-ui/react";
 import axios from "axios";
-import {useState} from "react";
-import {PLAYER_NOT_FOUND, TOO_MANY_PLAYERS} from "@/util/type/PlayerChecker";
+import { useState } from "react";
+import { PLAYER_NOT_FOUND, TOO_MANY_PLAYERS } from "@/util/type/PlayerChecker";
+import { PLAYER_IGN_MAX_LENGTH } from "@/util/TeamValidation";
 import Link from "next/link";
 
 export default function PlayerInput<T extends FieldValues = never>(
@@ -62,6 +63,10 @@ export default function PlayerInput<T extends FieldValues = never>(
                                         setAccountId(undefined);
                                         return "プレイヤー名が短すぎます";
                                     }
+                                    if (value.length > PLAYER_IGN_MAX_LENGTH) {
+                                        setAccountId(undefined);
+                                        return `プレイヤー名は${PLAYER_IGN_MAX_LENGTH}字以内で入力してください`;
+                                    }
                                     return true;
                                 },
 
@@ -78,10 +83,30 @@ export default function PlayerInput<T extends FieldValues = never>(
                                         return true;
                                     }
 
-                                    const response = await axios.post(`/api/ign`, {username});
-                                    const trulyName = response.data.nickname;
-                                    const uid = response.data.account_id;
-                                    const err = response.data.errorMsg;
+                                    let responseData: {
+                                        nickname?: string;
+                                        account_id?: string;
+                                        errorMsg?: string;
+                                    };
+                                    try {
+                                        const response = await axios.post(`/api/ign`, { username });
+                                        responseData = response.data;
+                                    } catch (e: unknown) {
+                                        setAccountId(undefined);
+                                        setLastValidatedUsername(undefined);
+                                        if (
+                                            axios.isAxiosError(e) &&
+                                            typeof e.response?.data?.errorMsg === "string" &&
+                                            e.response.data.errorMsg
+                                        ) {
+                                            return e.response.data.errorMsg;
+                                        }
+                                        return "プレイヤーの確認に失敗しました。少し待ってから再度お試しください";
+                                    }
+
+                                    const trulyName = responseData.nickname;
+                                    const uid = responseData.account_id;
+                                    const err = responseData.errorMsg;
 
                                     setAccountId(undefined);
                                     setLastValidatedUsername(undefined);
@@ -118,6 +143,7 @@ export default function PlayerInput<T extends FieldValues = never>(
                                 href={`https://profile.worldofwarships.asia/statistics/${accountId}`}
                                 className="text-blue-600 dark:text-blue-400 hover:underline break-all"
                                 target="_blank"
+                                rel="noopener noreferrer"
                             >
                                 {`https://profile.worldofwarships.asia/statistics/${accountId}`}
                             </Link>

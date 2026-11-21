@@ -1,7 +1,8 @@
 import { timingSafeEqual } from "crypto";
 import { GoogleSpreadsheetWorksheet } from "google-spreadsheet";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
-import { hashPassword } from "@/util/Argon2Service";
+import { hashPassword, MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
+import { logServerError } from "@/util/SafeLogger";
 
 export const MAX_AUTH_FAILURES = 10;
 export const LOCK_DURATION_MS = 60 * 60 * 1000; // 1時間
@@ -30,13 +31,17 @@ export type AuthResult =
           message: string;
       };
 
-// 同一プロセス内での並列リクエスト排他制御用セット
+// 同一プロセス内での並列リクエスト排他制御用セット・直列キュー
 const globalForAuth = globalThis as unknown as {
     __wowsCrfProcessingTeams?: Set<string>;
+    __wowsCrfSerializedQueues?: Map<string, Promise<void>>;
 };
 const processingTeams =
     globalForAuth.__wowsCrfProcessingTeams ??
     (globalForAuth.__wowsCrfProcessingTeams = new Set<string>());
+const serializedQueues =
+    globalForAuth.__wowsCrfSerializedQueues ??
+    (globalForAuth.__wowsCrfSerializedQueues = new Map<string, Promise<void>>());
 
 /**
  * 複数チームキーに対する認証・更新処理を排他実行するラッパー（デッドロック防止のため辞書順処理）
@@ -46,7 +51,7 @@ export async function withTeamLocks<T>(
     fn: () => Promise<T>
 ): Promise<{ locked: true } | { locked: false; result: T }> {
     const keys = Array.from(
-        new Set(teamNickNames.map((name) => name.trim()).filter(Boolean))
+        new Set(teamNickNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
     ).sort();
 
     if (keys.some((key) => processingTeams.has(key))) {
@@ -73,6 +78,34 @@ export async function withTeamLock<T>(
     fn: () => Promise<T>
 ): Promise<{ locked: true } | { locked: false; result: T }> {
     return withTeamLocks([teamNickName], fn);
+}
+
+/**
+ * 同一キーに対する処理を FIFO 順で直列待機実行する（短時間クリティカルセクション用）
+ */
+export async function withSerializedLock<T>(
+    key: string,
+    fn: () => Promise<T>
+): Promise<T> {
+    const normalizedKey = key.trim().toLowerCase();
+    const prev = serializedQueues.get(normalizedKey) ?? Promise.resolve();
+
+    let releaseCurrent!: () => void;
+    const current = new Promise<void>((resolve) => {
+        releaseCurrent = resolve;
+    });
+    const chained = prev.then(() => current);
+    serializedQueues.set(normalizedKey, chained);
+
+    await prev;
+    try {
+        return await fn();
+    } finally {
+        releaseCurrent();
+        if (serializedQueues.get(normalizedKey) === chained) {
+            serializedQueues.delete(normalizedKey);
+        }
+    }
 }
 
 /**
@@ -109,7 +142,7 @@ export async function authenticateTeamUnlocked(
         };
     }
 
-    if (!password) {
+    if (!password || password.length > MAX_PASSWORD_LENGTH) {
         return {
             ok: false,
             status: 401,
@@ -228,19 +261,28 @@ export async function authenticateTeamUnlocked(
         await sheet.saveUpdatedCells();
     }
 
-    // シートから現在のチームデータを抽出
+    // シートから現在のチームデータを抽出（数式セルが混入していた場合は評価結果を返却しない）
+    const readSafeCellString = (row: number, col: number, fallback = ""): string => {
+        const cell = sheet.getCell(row, col);
+        if (cell.formula) {
+            logServerError("TeamAuth.readSafeCellString", `Formula detected in cell (${row}, ${col})`);
+            return "";
+        }
+        return cell.value?.toString() ?? fallback;
+    };
+
     const players: string[] = [];
     for (let i = 0; i < 10; i++) {
-        const rawIgn = sheet.getCell(2 + i, 1).value?.toString()?.trim() ?? "";
+        const rawIgn = readSafeCellString(2 + i, 1).trim();
         players.push(rawIgn === "undefined" ? "" : rawIgn);
     }
 
     const teamData: TeamData = {
-        teamNickName: sheet.getCell(1, 1).value?.toString() ?? trimmedNick,
-        teamName: sheet.getCell(1, 2).value?.toString() ?? "",
-        contact: sheet.getCell(1, 4).value?.toString() ?? "",
-        comment: sheet.getCell(1, 5).value?.toString() ?? "",
-        logoUrl: sheet.getCell(1, 6).value?.toString() ?? "",
+        teamNickName: readSafeCellString(1, 1, trimmedNick),
+        teamName: readSafeCellString(1, 2),
+        contact: readSafeCellString(1, 4),
+        comment: readSafeCellString(1, 5),
+        logoUrl: readSafeCellString(1, 6),
         players,
     };
 
