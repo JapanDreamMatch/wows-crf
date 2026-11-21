@@ -5,9 +5,19 @@ import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import { logServerError } from "@/util/SafeLogger";
+import { readJsonWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 
 export async function POST(req: NextRequest) {
     try {
+        const originCheck = verifySameOriginRequest(req);
+        if (!originCheck.ok) {
+            return NextResponse.json(
+                { message: originCheck.message },
+                { status: originCheck.status },
+            );
+        }
+
         const rate = checkRateLimit("team-verify", extractClientIp(req), 20, 60_000);
         if (!rate.allowed) {
             return NextResponse.json(
@@ -24,17 +34,15 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        let body: unknown;
-        try {
-            body = await req.json();
-        } catch {
+        const jsonResult = await readJsonWithLimit<{ teamNickName?: unknown; password?: unknown }>(req);
+        if (!jsonResult.ok) {
             return NextResponse.json(
-                { message: "不正なリクエスト形式です" },
-                { status: 400 },
+                { message: jsonResult.message },
+                { status: jsonResult.status },
             );
         }
 
-        const parsed = body as { teamNickName?: unknown; password?: unknown } | null;
+        const parsed = jsonResult.data;
         const teamNickName = typeof parsed?.teamNickName === "string" ? parsed.teamNickName : "";
         const password = typeof parsed?.password === "string" ? parsed.password : "";
 

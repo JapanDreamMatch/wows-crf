@@ -3,9 +3,19 @@ import { getCachedRegisterSheetNames } from "@/util/AppSettingsCache";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import { logServerError } from "@/util/SafeLogger";
 import { hasDuplicateSheetName } from "@/util/TeamValidation";
+import { readJsonWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 
 export async function POST(req: NextRequest) {
     try {
+        const originCheck = verifySameOriginRequest(req);
+        if (!originCheck.ok) {
+            return NextResponse.json(
+                { message: originCheck.message },
+                { status: originCheck.status },
+            );
+        }
+
         const rate = checkRateLimit("isTeamExist", extractClientIp(req), 30, 60_000);
         if (!rate.allowed) {
             return NextResponse.json(
@@ -14,14 +24,15 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        let body: unknown;
-        try {
-            body = await req.json();
-        } catch {
-            return NextResponse.json({ message: "不正なリクエスト形式です" }, { status: 400 });
+        const jsonResult = await readJsonWithLimit<{ teamNickName?: unknown }>(req);
+        if (!jsonResult.ok) {
+            return NextResponse.json(
+                { message: jsonResult.message },
+                { status: jsonResult.status },
+            );
         }
 
-        const rawNick = (body as { teamNickName?: unknown } | null)?.teamNickName;
+        const rawNick = jsonResult.data?.teamNickName;
         if (typeof rawNick !== "string") {
             return NextResponse.json({ message: "チーム略名を文字列で指定してください" }, { status: 400 });
         }

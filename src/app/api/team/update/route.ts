@@ -6,11 +6,13 @@ import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { Player } from "@/util/Player";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
-import { CloudStorageService } from "@/util/StorageService";
+import { CloudStorageService, extractObjectNameFromUrl } from "@/util/StorageService";
 import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
 import { MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
+import { readFormDataWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 import {
     extractFormString,
     hasDuplicateSheetName,
@@ -23,25 +25,6 @@ import {
 } from "@/util/TeamValidation";
 import { assertSafeSheetCellString, setCellStringSafe } from "@/util/SpreadsheetSanitizer";
 import { logServerError } from "@/util/SafeLogger";
-
-/**
- * 既存の公開URLからGCSオブジェクト名を抽出する（拡張子変更時の旧ファイル削除用）
- */
-function extractObjectNameFromUrl(url: string): string | null {
-    if (!url) return null;
-    try {
-        const parsed = new URL(url);
-        // https://storage.googleapis.com/{bucketName}/{objectName}
-        const parts = parsed.pathname.split("/").filter(Boolean);
-        if (parts.length < 2) return null;
-        return parts
-            .slice(1)
-            .map((p) => decodeURIComponent(p))
-            .join("/");
-    } catch {
-        return null;
-    }
-}
 
 /**
  * チームシート新規作成用の行データを組み立てる
@@ -97,6 +80,11 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
+            const originCheck = verifySameOriginRequest(req);
+            if (!originCheck.ok) {
+                return { status: originCheck.status, body: { message: originCheck.message } };
+            }
+
             const rate = checkRateLimit("team-update", extractClientIp(req), 15, 60_000);
             if (!rate.allowed) {
                 return {
@@ -116,16 +104,12 @@ export async function POST(req: NextRequest) {
 
             const { REGISTER_SHEET_ID } = process.env;
 
-            // (2) 早期サイズチェック
-            const contentLength = Number(req.headers.get("content-length") ?? 0);
-            if (contentLength > MAX_LOGO_SIZE + 1024 * 1024) {
-                return {
-                    status: 413,
-                    body: { message: "画像サイズは20MB以内である必要があります" },
-                };
+            // (2) Content-Type・ストリームサイズ上限チェック（chunked 含む）
+            const formResult = await readFormDataWithLimit(req, MAX_LOGO_SIZE + 1024 * 1024);
+            if (!formResult.ok) {
+                return { status: formResult.status, body: { message: formResult.message } };
             }
-
-            const formData = await req.formData();
+            const formData = formResult.formData;
 
             const nickKey = formData.get("teamNickName") !== null ? "teamNickName" : "teamNickname";
             const teamNickField = extractFormString(formData, nickKey);
@@ -275,7 +259,7 @@ export async function POST(req: NextRequest) {
                 const storage = new CloudStorageService();
                 let logoResult: { objectName: string; url: string } | null = null;
                 const prevLogoUrl = auth.teamData.logoUrl;
-                const prevObjectName = extractObjectNameFromUrl(prevLogoUrl);
+                const prevObjectName = extractObjectNameFromUrl(prevLogoUrl, storage.getBucketName());
 
                 if (logoBuffer && logoType) {
                     sendProgress?.("画像のアップロード", 82);

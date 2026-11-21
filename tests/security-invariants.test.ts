@@ -5,6 +5,7 @@ import { REGISTER_HEADER, REGISTER_PERIOD } from "@/util/SheetHeader";
 import { MAX_URL_SHIPS } from "@/util/ShipCheckerQuery";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { LOCK_DURATION_MS, MAX_AUTH_FAILURES } from "@/util/TeamAuth";
+import { isSafeDiscordInviteUrl, isSafeGcsLogoUrl } from "@/util/UrlValidator";
 
 describe("Security & Spreadsheet Contract Invariants", () => {
     it("REGISTER_HEADER maintains the exact 8-column layout (A..H) for G2 LogoURL and H2..H5 Salt/Hash/Lock", () => {
@@ -58,5 +59,16 @@ describe("Security & Spreadsheet Contract Invariants", () => {
             [{ Type: "TeamInfo", IGN: "JDM" }],
             { raw: true },
         );
+    });
+
+    it("UrlValidator restricts Discord invites and GCS logo URLs to safe HTTPS allowlists", () => {
+        expect(isSafeDiscordInviteUrl("https://discord.gg/abc123")).toBe(true);
+        expect(isSafeDiscordInviteUrl("https://discord.com/invite/abc123")).toBe(true);
+        expect(isSafeDiscordInviteUrl("javascript:alert(1)")).toBe(false);
+        expect(isSafeDiscordInviteUrl("https://evil.example.com/invite/abc")).toBe(false);
+
+        expect(isSafeGcsLogoUrl("https://storage.googleapis.com/jdm-team-icon/logos/JDM.png")).toBe(true);
+        expect(isSafeGcsLogoUrl("http://storage.googleapis.com/jdm-team-icon/logos/JDM.png")).toBe(false);
+        expect(isSafeGcsLogoUrl("https://evil.example.com/a/b.png")).toBe(false);
     });
 });

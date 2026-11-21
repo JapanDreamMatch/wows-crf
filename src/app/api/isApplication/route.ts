@@ -4,9 +4,18 @@ import { CheckTeamAmount } from "@/app/api/isApplication/checkTeamAmount";
 import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import { logServerError } from "@/util/SafeLogger";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 
 export async function POST(req: NextRequest) {
     try {
+        const originCheck = verifySameOriginRequest(req);
+        if (!originCheck.ok) {
+            return NextResponse.json(
+                { message: originCheck.message },
+                { status: originCheck.status },
+            );
+        }
+
         const rate = checkRateLimit("isApplication", extractClientIp(req), 60, 60_000);
         if (!rate.allowed) {
             return NextResponse.json(

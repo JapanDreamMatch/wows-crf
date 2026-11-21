@@ -17,6 +17,8 @@ import {
 import { withTeamLocks } from "@/util/TeamAuth";
 import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
+import { readFormDataWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 import {
     extractFormString,
     hasDuplicateSheetName,
@@ -38,6 +40,11 @@ export async function POST(req: NextRequest) {
         sendProgress?: (step: string, progress: number) => void
     ): Promise<{ status: number; body: Record<string, any> }> => {
         try {
+            const originCheck = verifySameOriginRequest(req);
+            if (!originCheck.ok) {
+                return { status: originCheck.status, body: { message: originCheck.message } };
+            }
+
             const rate = checkRateLimit("register", extractClientIp(req), 10, 60_000);
             if (!rate.allowed) {
                 return {
@@ -48,16 +55,12 @@ export async function POST(req: NextRequest) {
 
             const { REGISTER_SHEET_ID } = process.env;
 
-            // (1) 早期サイズチェック（formData() の前）
-            const contentLength = Number(req.headers.get("content-length") ?? 0);
-            if (contentLength > MAX_LOGO_SIZE + 1024 * 1024) {
-                return {
-                    status: 413,
-                    body: { message: "画像サイズは20MB以内である必要があります" },
-                };
+            // (1) Content-Type・ストリームサイズ上限チェック（chunked 含む）
+            const formResult = await readFormDataWithLimit(req, MAX_LOGO_SIZE + 1024 * 1024);
+            if (!formResult.ok) {
+                return { status: formResult.status, body: { message: formResult.message } };
             }
-
-            const formData = await req.formData();
+            const formData = formResult.formData;
 
             // 文字列フィールドの型安全抽出
             const passwordField = extractFormString(formData, "password");

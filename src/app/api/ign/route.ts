@@ -4,8 +4,18 @@ import { resolveAccountFromList, type WowsAccountEntry } from "@/util/Player";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import { logServerError } from "@/util/SafeLogger";
 import { validatePlayerIgn } from "@/util/TeamValidation";
+import { readJsonWithLimit } from "@/util/RequestGuard";
+import { verifySameOriginRequest } from "@/util/OriginGuard";
 
 export async function POST(req: NextRequest) {
+    const originCheck = verifySameOriginRequest(req);
+    if (!originCheck.ok) {
+        return NextResponse.json(
+            { errorMsg: originCheck.message },
+            { status: originCheck.status },
+        );
+    }
+
     const rate = checkRateLimit("ign", extractClientIp(req), 30, 60_000);
     if (!rate.allowed) {
         return NextResponse.json(
@@ -14,14 +24,15 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    let body: unknown;
-    try {
-        body = await req.json();
-    } catch {
-        return NextResponse.json({ errorMsg: "不正なリクエスト形式です" }, { status: 400 });
+    const jsonResult = await readJsonWithLimit<{ username?: unknown }>(req);
+    if (!jsonResult.ok) {
+        return NextResponse.json(
+            { errorMsg: jsonResult.message },
+            { status: jsonResult.status },
+        );
     }
 
-    const rawUsername = (body as { username?: unknown } | null)?.username;
+    const rawUsername = jsonResult.data?.username;
     if (typeof rawUsername !== "string") {
         return NextResponse.json({ errorMsg: "プレイヤー名を文字列で指定してください" }, { status: 400 });
     }
