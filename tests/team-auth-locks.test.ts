@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withTeamLock, withTeamLocks } from "@/util/TeamAuth";
+import { withSerializedLock, withTeamLock, withTeamLocks } from "@/util/TeamAuth";
 
 describe("TeamAuth In-Memory Concurrency Locks", () => {
     it("allows sequential execution and blocks concurrent execution on the same team", async () => {
@@ -62,5 +62,56 @@ describe("TeamAuth In-Memory Concurrency Locks", () => {
         // Both must be unlocked afterwards
         expect(await withTeamLock("OLD_T", async () => "ok")).toEqual({ locked: false, result: "ok" });
         expect(await withTeamLock("NEW_T", async () => "ok")).toEqual({ locked: false, result: "ok" });
+    });
+
+    it("normalizes lock keys case-insensitively so 'jdm' and 'JDM' cannot run concurrently", async () => {
+        let releaseLock!: () => void;
+        const gate = new Promise<void>((resolve) => {
+            releaseLock = resolve;
+        });
+
+        const active = withTeamLock("JDM", async () => {
+            await gate;
+            return "done";
+        });
+
+        expect(await withTeamLock("jdm", async () => "bypass")).toEqual({ locked: true });
+        releaseLock();
+        expect(await active).toEqual({ locked: false, result: "done" });
+    });
+
+    it("withSerializedLock queues concurrent tasks in FIFO order and recovers after errors", async () => {
+        const order: string[] = [];
+        let releaseFirst!: () => void;
+        const firstGate = new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+        });
+
+        const first = withSerializedLock("__register_commit__", async () => {
+            order.push("start-1");
+            await firstGate;
+            order.push("end-1");
+            return 1;
+        });
+
+        const second = withSerializedLock("__register_commit__", async () => {
+            order.push("run-2");
+            throw new Error("boom");
+        });
+
+        const third = withSerializedLock("__register_commit__", async () => {
+            order.push("run-3");
+            return 3;
+        });
+
+        // Give microtasks a tick: only first should have started
+        await Promise.resolve();
+        expect(order).toEqual(["start-1"]);
+
+        releaseFirst();
+        expect(await first).toBe(1);
+        await expect(second).rejects.toThrow("boom");
+        expect(await third).toBe(3);
+        expect(order).toEqual(["start-1", "end-1", "run-2", "run-3"]);
     });
 });

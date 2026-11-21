@@ -49,7 +49,15 @@ export default function RegisterForm(){
             router.push('/register/success');
         } catch (e: any) {
             isSubmittingClickRef.current = false;
-            router.push(`/register/error?msg=${encodeURIComponent(e.message || "内部エラーが発生しました")}`);
+            try {
+                sessionStorage.setItem(
+                    "wows-crf-register-error",
+                    e?.message || "内部エラーが発生しました",
+                );
+            } catch {
+                // sessionStorage 利用不可時はデフォルトエラー表示にフォールバック
+            }
+            router.push("/register/error");
         }
     };
 

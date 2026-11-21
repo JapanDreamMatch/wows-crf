@@ -1,20 +1,17 @@
-import {GoogleSpreadsheetService} from "@/util/SpreadSheetService";
+import { getCachedAppSettings } from "@/util/AppSettingsCache";
 
 export async function CheckTime(): Promise<boolean> {
-    const { API_SETTINGS_SHEET_ID } = process.env;
-    const spreadSheet = new GoogleSpreadsheetService(API_SETTINGS_SHEET_ID ?? "");
-
-    const sheet = await spreadSheet.getSheet("registerPeriod");
-    await sheet.loadCells({startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 3});
-    const startCell = sheet.getCell(1,0).value?.toString() ?? undefined;
-    const endCell = sheet.getCell(1,1).value?.toString() ?? undefined;
-    if(startCell == undefined || endCell == undefined) {
+    const settings = await getCachedAppSettings();
+    if (!settings.startDate || !settings.endDate) {
         return false;
     }
 
     const now = new Date();
-    const startDate = new Date(startCell);
-    const endDate = new Date(endCell);
+    const startDate = new Date(settings.startDate);
+    const endDate = new Date(settings.endDate);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        return false;
+    }
 
     return startDate <= now && now <= endDate;
 }

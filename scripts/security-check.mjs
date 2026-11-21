@@ -170,6 +170,43 @@ for (const relPath of trackedFiles) {
         if (/\beval\s*\(/.test(content)) {
             reportError("UNSAFE_EVAL", `${normalizedPath} で eval() が使用されています`);
         }
+
+        // Google Sheets addRows の raw: true 強制検査（SpreadSheetService 外での生 addRows 呼び出し禁止）
+        if (normalizedPath.startsWith("src/") && normalizedPath !== "src/util/SpreadSheetService.ts") {
+            const addRowsCalls = content.match(/\.addRows\([^;]+\)/g) ?? [];
+            for (const call of addRowsCalls) {
+                if (!/raw\s*:\s*true/.test(call)) {
+                    reportError(
+                        "SHEETS_FORMULA_INJECTION",
+                        `${normalizedPath} で raw: true 指定のない addRows() が呼ばれています`,
+                    );
+                }
+            }
+        }
+
+        // API Route Handler での生エラーメッセージ露出防止
+        if (normalizedPath.startsWith("src/app/api/") && /\b(?:error|err|e)\??\.message\b/.test(content)) {
+            reportError(
+                "API_ERROR_LEAK",
+                `${normalizedPath} で例外の .message が直接参照されています（固定メッセージを使用してください）`,
+            );
+        }
+
+        // target="_blank" の rel="noopener noreferrer" 強制
+        if (normalizedPath.startsWith("src/")) {
+            const lines = content.split(/\r?\n/);
+            for (let idx = 0; idx < lines.length; idx++) {
+                if (/target\s*=\s*["']_blank["']/.test(lines[idx])) {
+                    const windowText = lines.slice(Math.max(0, idx - 3), idx + 4).join(" ");
+                    if (!windowText.includes("noopener") || !windowText.includes("noreferrer")) {
+                        reportError(
+                            "TABNABBING",
+                            `${normalizedPath}:${idx + 1} の target="_blank" に rel="noopener noreferrer" がありません`,
+                        );
+                    }
+                }
+            }
+        }
     }
 }
 

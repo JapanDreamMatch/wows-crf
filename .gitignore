@@ -42,3 +42,6 @@ next-env.d.ts
 #???
 cloudbuild.yaml
 Dockerfile
+
+# private security audit / internal dev docs
+/doc-dev/

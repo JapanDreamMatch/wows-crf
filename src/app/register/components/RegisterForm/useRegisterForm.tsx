@@ -1,38 +1,34 @@
-import {object, string} from "yup";
-import * as yup from "yup";
-import {postWithProgress} from "@/util/postWithProgress";
+import { postWithProgress } from "@/util/postWithProgress";
 
-export const registerSchema = object({
-    teamName: string(),
-    teamNickname: string(),
-    password: string(),
-    passwordConfirm: string(),
-    teamLogo: yup.mixed<FileList | File>().nullable().notRequired(),
-    contact: string(),
-    player1: string(),
-    player2: string(),
-    player3: string(),
-    player4: string(),
-    player5: string(),
-    player6: string(),
-    player7: string(),
-    player8: string(),
-    player9: string(),
-    player10: string(),
-    comment: string()
-});
-export type registerType = yup.InferType<typeof registerSchema>;
+export interface registerType {
+    teamName?: string;
+    teamNickname?: string;
+    password?: string;
+    passwordConfirm?: string;
+    teamLogo?: FileList | File | null;
+    contact?: string;
+    player1?: string;
+    player2?: string;
+    player3?: string;
+    player4?: string;
+    player5?: string;
+    player6?: string;
+    player7?: string;
+    player8?: string;
+    player9?: string;
+    player10?: string;
+    comment?: string;
+}
 
-//送信ボタンの動作
+// 送信ボタンの動作
 export const onSubmit = async (
     formData: registerType,
     onProgress?: (step: string, progress: number) => void
 ) => {
-
     let logo;
-    if(formData.teamLogo instanceof FileList){
+    if (formData.teamLogo instanceof FileList) {
         logo = formData.teamLogo[0];
-    } else if(formData.teamLogo instanceof File){
+    } else if (formData.teamLogo instanceof File) {
         logo = formData.teamLogo;
     }
 
