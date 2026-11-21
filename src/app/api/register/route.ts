@@ -7,7 +7,12 @@ import { CheckTime } from "@/app/api/isApplication/checkTime";
 import { CheckTeamAmount } from "@/app/api/isApplication/checkTeamAmount";
 import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { CloudStorageService } from "@/util/StorageService";
-import { detectImageType, MAX_LOGO_SIZE, DetectedImage } from "@/util/ImageValidator";
+import {
+    detectImageType,
+    MAX_LOGO_SIZE,
+    DetectedImage,
+    validateImageDimensions,
+} from "@/util/ImageValidator";
 import {
     generateSalt,
     hashPassword,
@@ -144,6 +149,13 @@ export async function POST(req: NextRequest) {
                     return {
                         status: 400,
                         body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
+                    };
+                }
+                const dimErr = validateImageDimensions(logoBuffer, logoType);
+                if (dimErr) {
+                    return {
+                        status: 400,
+                        body: { message: dimErr },
                     };
                 }
             }

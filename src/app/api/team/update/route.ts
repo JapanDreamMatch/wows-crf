@@ -7,7 +7,12 @@ import { Player } from "@/util/Player";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
 import { CloudStorageService, extractObjectNameFromUrl } from "@/util/StorageService";
-import { detectImageType, DetectedImage, MAX_LOGO_SIZE } from "@/util/ImageValidator";
+import {
+    detectImageType,
+    DetectedImage,
+    MAX_LOGO_SIZE,
+    validateImageDimensions,
+} from "@/util/ImageValidator";
 import { MAX_PASSWORD_LENGTH } from "@/util/Argon2Service";
 import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
@@ -208,6 +213,13 @@ export async function POST(req: NextRequest) {
                         return {
                             status: 400,
                             body: { message: "画像ファイルはjpeg, jpg, png形式のみ受け付けています" },
+                        };
+                    }
+                    const dimErr = validateImageDimensions(logoBuffer, logoType);
+                    if (dimErr) {
+                        return {
+                            status: 400,
+                            body: { message: dimErr },
                         };
                     }
                 }

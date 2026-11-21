@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { detectImageType } from "@/util/ImageValidator";
+import {
+    detectImageType,
+    extractImageDimensions,
+    MAX_LOGO_DIMENSION,
+    validateImageDimensions,
+} from "@/util/ImageValidator";
 
 describe("ImageValidator (Magic Number Verification)", () => {
     it("detects valid PNG buffers", () => {
@@ -40,5 +45,50 @@ describe("ImageValidator (Magic Number Verification)", () => {
         expect(detectImageType(webpPayload)).toBeNull();
         expect(detectImageType(pdfPayload)).toBeNull();
         expect(detectImageType(exePayload)).toBeNull();
+    });
+
+    it("extracts and validates PNG and JPEG image dimensions to reject image bombs", () => {
+        const makePng = (w: number, h: number) => {
+            const buf = Buffer.alloc(24);
+            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf, 0);
+            buf.writeUInt32BE(13, 8);
+            buf.write("IHDR", 12, "ascii");
+            buf.writeUInt32BE(w, 16);
+            buf.writeUInt32BE(h, 20);
+            return buf;
+        };
+
+        const validPng = makePng(512, 512);
+        expect(extractImageDimensions(validPng, { mime: "image/png", ext: "png" })).toEqual({
+            width: 512,
+            height: 512,
+        });
+        expect(validateImageDimensions(validPng, { mime: "image/png", ext: "png" })).toBeNull();
+
+        const bombPng = makePng(MAX_LOGO_DIMENSION + 1, 512);
+        expect(validateImageDimensions(bombPng, { mime: "image/png", ext: "png" })).not.toBeNull();
+
+        const makeJpeg = (w: number, h: number) => {
+            const buf = Buffer.alloc(15);
+            buf[0] = 0xff;
+            buf[1] = 0xd8; // SOI
+            buf[2] = 0xff;
+            buf[3] = 0xc0; // SOF0
+            buf.writeUInt16BE(11, 4); // length
+            buf[6] = 8; // precision
+            buf.writeUInt16BE(h, 7);
+            buf.writeUInt16BE(w, 9);
+            return buf;
+        };
+
+        const validJpeg = makeJpeg(1024, 768);
+        expect(extractImageDimensions(validJpeg, { mime: "image/jpeg", ext: "jpg" })).toEqual({
+            width: 1024,
+            height: 768,
+        });
+        expect(validateImageDimensions(validJpeg, { mime: "image/jpeg", ext: "jpg" })).toBeNull();
+
+        const bombJpeg = makeJpeg(1024, MAX_LOGO_DIMENSION + 100);
+        expect(validateImageDimensions(bombJpeg, { mime: "image/jpeg", ext: "jpg" })).not.toBeNull();
     });
 });
