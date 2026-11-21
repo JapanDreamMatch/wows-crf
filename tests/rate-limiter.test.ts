@@ -2,12 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkRateLimit, extractClientIp, resetRateLimiterForTest } from "@/util/RateLimiter";
 
 describe("RateLimiter", () => {
+    const originalHops = process.env.TRUSTED_PROXY_HOPS;
+
     beforeEach(() => {
         resetRateLimiterForTest();
+        delete process.env.TRUSTED_PROXY_HOPS;
     });
 
     afterEach(() => {
         resetRateLimiterForTest();
+        if (originalHops === undefined) {
+            delete process.env.TRUSTED_PROXY_HOPS;
+        } else {
+            process.env.TRUSTED_PROXY_HOPS = originalHops;
+        }
         vi.useRealTimers();
     });
 
@@ -29,15 +37,22 @@ describe("RateLimiter", () => {
         expect(checkRateLimit("ign", "1.2.3.4", 2, 10_000).allowed).toBe(true);
     });
 
-    it("extracts client IP from x-forwarded-for or x-real-ip", () => {
-        const req1 = new Request("https://example.com", {
-            headers: { "x-forwarded-for": "203.0.113.10, 10.0.0.1" },
+    it("extracts rightmost trusted proxy hop from x-forwarded-for to resist client spoofing", () => {
+        const spoofedReq = new Request("https://example.com", {
+            headers: { "x-forwarded-for": "198.51.100.99, 203.0.113.10" },
         });
-        expect(extractClientIp(req1)).toBe("203.0.113.10");
+        expect(extractClientIp(spoofedReq)).toBe("203.0.113.10");
 
-        const req2 = new Request("https://example.com", {
+        process.env.TRUSTED_PROXY_HOPS = "2";
+        const multiHopReq = new Request("https://example.com", {
+            headers: { "x-forwarded-for": "198.51.100.99, 203.0.113.10, 10.0.0.1" },
+        });
+        expect(extractClientIp(multiHopReq)).toBe("203.0.113.10");
+
+        // Does not unconditionally trust x-real-ip without x-forwarded-for
+        const realIpOnlyReq = new Request("https://example.com", {
             headers: { "x-real-ip": "198.51.100.2" },
         });
-        expect(extractClientIp(req2)).toBe("198.51.100.2");
+        expect(extractClientIp(realIpOnlyReq)).toBe("unknown");
     });
 });

@@ -53,4 +53,26 @@ describe("OriginGuard", () => {
         });
         expect(verifySameOriginRequest(req)).toEqual({ ok: true });
     });
+
+    it("verifies protocol matches x-forwarded-proto on same-host origin comparison", () => {
+        const downgradeOrigin = new Request("https://jdm.example.com/api/register", {
+            method: "POST",
+            headers: {
+                host: "jdm.example.com",
+                "x-forwarded-proto": "https",
+                origin: "http://jdm.example.com",
+            },
+        });
+        expect(verifySameOriginRequest(downgradeOrigin).ok).toBe(false);
+
+        const matchingProto = new Request("https://jdm.example.com/api/register", {
+            method: "POST",
+            headers: {
+                host: "jdm.example.com",
+                "x-forwarded-proto": "https",
+                origin: "https://jdm.example.com",
+            },
+        });
+        expect(verifySameOriginRequest(matchingProto)).toEqual({ ok: true });
+    });
 });

@@ -64,11 +64,22 @@ export default function TeamNickNameInput<T extends FieldValues = never>(
                                     ) {
                                         return true;
                                     }
-                                    const response = await axios.post(`/api/isTeamExist`, { teamNickName });
-                                    if(response.data.isExist){
-                                        return "そのチーム略名は既に存在しています."
+                                    try {
+                                        const response = await axios.post(`/api/isTeamExist`, { teamNickName });
+                                        if (response.data.isExist) {
+                                            return "そのチーム略名は既に存在しています.";
+                                        }
+                                        return true;
+                                    } catch (e: unknown) {
+                                        if (
+                                            axios.isAxiosError(e) &&
+                                            typeof e.response?.data?.message === "string" &&
+                                            e.response.data.message
+                                        ) {
+                                            return e.response.data.message;
+                                        }
+                                        return "チーム略名の確認に失敗しました。少し待ってから再度お試しください";
                                     }
-                                    return true;
                                 }
                             }
                         })}

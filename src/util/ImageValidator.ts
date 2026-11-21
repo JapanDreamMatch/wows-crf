@@ -91,7 +91,7 @@ export function extractImageDimensions(
         }
 
         if (isJpegSofMarker(marker)) {
-            if (offset + 7 > buf.length) {
+            if (segmentLength < 7 || offset + 7 > buf.length) {
                 return null;
             }
             const height = buf.readUInt16BE(offset + 3);

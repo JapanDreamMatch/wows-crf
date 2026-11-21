@@ -90,5 +90,14 @@ describe("ImageValidator (Magic Number Verification)", () => {
 
         const bombJpeg = makeJpeg(1024, MAX_LOGO_DIMENSION + 100);
         expect(validateImageDimensions(bombJpeg, { mime: "image/jpeg", ext: "jpg" })).not.toBeNull();
+
+        // Malformed JPEG SOF segment with segmentLength < 7 followed by other bytes
+        const shortSofJpeg = Buffer.alloc(16);
+        shortSofJpeg[0] = 0xff;
+        shortSofJpeg[1] = 0xd8;
+        shortSofJpeg[2] = 0xff;
+        shortSofJpeg[3] = 0xc0;
+        shortSofJpeg.writeUInt16BE(4, 4); // < 7 bytes
+        expect(extractImageDimensions(shortSofJpeg, { mime: "image/jpeg", ext: "jpg" })).toBeNull();
     });
 });

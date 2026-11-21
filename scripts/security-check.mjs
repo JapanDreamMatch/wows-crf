@@ -185,7 +185,7 @@ for (const relPath of trackedFiles) {
         }
 
         // API Route Handler での生エラーメッセージ露出防止
-        if (normalizedPath.startsWith("src/app/api/") && /(?:error|err)\??\.message\b/.test(content)) {
+        if (normalizedPath.startsWith("src/app/api/") && /\b(?:error|err|e)\??\.message\b/.test(content)) {
             reportError(
                 "API_ERROR_LEAK",
                 `${normalizedPath} で例外の .message が直接参照されています（固定メッセージを使用してください）`,

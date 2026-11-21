@@ -31,13 +31,17 @@ export type AuthResult =
           message: string;
       };
 
-// 同一プロセス内での並列リクエスト排他制御用セット
+// 同一プロセス内での並列リクエスト排他制御用セット・直列キュー
 const globalForAuth = globalThis as unknown as {
     __wowsCrfProcessingTeams?: Set<string>;
+    __wowsCrfSerializedQueues?: Map<string, Promise<void>>;
 };
 const processingTeams =
     globalForAuth.__wowsCrfProcessingTeams ??
     (globalForAuth.__wowsCrfProcessingTeams = new Set<string>());
+const serializedQueues =
+    globalForAuth.__wowsCrfSerializedQueues ??
+    (globalForAuth.__wowsCrfSerializedQueues = new Map<string, Promise<void>>());
 
 /**
  * 複数チームキーに対する認証・更新処理を排他実行するラッパー（デッドロック防止のため辞書順処理）
@@ -74,6 +78,34 @@ export async function withTeamLock<T>(
     fn: () => Promise<T>
 ): Promise<{ locked: true } | { locked: false; result: T }> {
     return withTeamLocks([teamNickName], fn);
+}
+
+/**
+ * 同一キーに対する処理を FIFO 順で直列待機実行する（短時間クリティカルセクション用）
+ */
+export async function withSerializedLock<T>(
+    key: string,
+    fn: () => Promise<T>
+): Promise<T> {
+    const normalizedKey = key.trim().toLowerCase();
+    const prev = serializedQueues.get(normalizedKey) ?? Promise.resolve();
+
+    let releaseCurrent!: () => void;
+    const current = new Promise<void>((resolve) => {
+        releaseCurrent = resolve;
+    });
+    const chained = prev.then(() => current);
+    serializedQueues.set(normalizedKey, chained);
+
+    await prev;
+    try {
+        return await fn();
+    } finally {
+        releaseCurrent();
+        if (serializedQueues.get(normalizedKey) === chained) {
+            serializedQueues.delete(normalizedKey);
+        }
+    }
 }
 
 /**

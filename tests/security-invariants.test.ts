@@ -59,6 +59,15 @@ describe("Security & Spreadsheet Contract Invariants", () => {
             [{ Type: "TeamInfo", IGN: "JDM" }],
             { raw: true },
         );
+
+        await service.addRows("JDM", [{ Type: "TeamInfo", IGN: "JDM" }], {
+            raw: undefined,
+            insert: true,
+        });
+        expect(mockAddRows).toHaveBeenLastCalledWith(
+            [{ Type: "TeamInfo", IGN: "JDM" }],
+            { insert: true, raw: true },
+        );
     });
 
     it("UrlValidator restricts Discord invites and GCS logo URLs to safe HTTPS allowlists", () => {

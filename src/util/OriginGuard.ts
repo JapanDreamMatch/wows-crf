@@ -46,7 +46,16 @@ export function verifySameOriginRequest(
 
         const forwardedHost = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
         const hostHeader = (forwardedHost || req.headers.get("host") || "").trim().toLowerCase();
-        if (hostHeader && parsedOrigin.host.toLowerCase() === hostHeader) {
+        const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+        const expectedProtocol =
+            forwardedProto === "http" || forwardedProto === "https"
+                ? `${forwardedProto}:`
+                : null;
+        if (
+            hostHeader &&
+            parsedOrigin.host.toLowerCase() === hostHeader &&
+            (!expectedProtocol || parsedOrigin.protocol === expectedProtocol)
+        ) {
             return { ok: true };
         }
 

@@ -67,7 +67,7 @@ export class GoogleSpreadsheetService {
         const sheet = this.doc.sheetsByTitle[sheetTitle];
 
         if (!sheet) { return; }
-        await sheet.addRows(values, { raw: true, ...options });
+        await sheet.addRows(values, { ...options, raw: options.raw ?? true });
     }
 
     /**

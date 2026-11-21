@@ -61,6 +61,7 @@ export async function readBodyBytesWithLimit(
             if (value) {
                 totalBytes += value.byteLength;
                 if (totalBytes > maxBytes) {
+                    await reader.cancel().catch(() => {});
                     return {
                         ok: false,
                         status: 413,
@@ -92,8 +93,9 @@ export async function readJsonWithLimit<T = Record<string, unknown>>(
     options?: { maxBytes?: number; allowEmpty?: boolean },
 ): Promise<GuardSuccess<{ data: T }> | GuardFailure> {
     const maxBytes = options?.maxBytes ?? DEFAULT_MAX_JSON_BYTES;
-    const contentType = req.headers.get("content-type")?.toLowerCase() ?? "";
-    if (!contentType.includes("application/json")) {
+    const contentType = req.headers.get("content-type") ?? "";
+    const mediaType = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (mediaType !== "application/json") {
         return {
             ok: false,
             status: 415,
@@ -127,10 +129,10 @@ export async function readFormDataWithLimit(
     maxBytes: number,
 ): Promise<GuardSuccess<{ formData: FormData }> | GuardFailure> {
     const contentType = req.headers.get("content-type") ?? "";
-    const lowerCt = contentType.toLowerCase();
+    const mediaType = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
     if (
-        !lowerCt.includes("multipart/form-data") &&
-        !lowerCt.includes("application/x-www-form-urlencoded")
+        mediaType !== "multipart/form-data" &&
+        mediaType !== "application/x-www-form-urlencoded"
     ) {
         return {
             ok: false,
@@ -145,7 +147,12 @@ export async function readFormDataWithLimit(
     }
 
     try {
-        const res = new Response(Buffer.from(bodyResult.bytes), {
+        const bodyView = Buffer.from(
+            bodyResult.bytes.buffer,
+            bodyResult.bytes.byteOffset,
+            bodyResult.bytes.byteLength,
+        );
+        const res = new Response(bodyView, {
             headers: { "content-type": contentType },
         });
         const formData = await res.formData();

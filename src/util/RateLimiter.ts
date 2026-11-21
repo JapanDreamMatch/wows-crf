@@ -26,20 +26,35 @@ function getStore(): Map<string, RateLimitEntry> {
     return g[GLOBAL_STORE_KEY];
 }
 
+function getTrustedProxyHops(): number {
+    const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+    if (!raw) {
+        return 1;
+    }
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+        return 1;
+    }
+    return parsed;
+}
+
 /**
  * リクエストヘッダからクライアント識別 IP を抽出する。
+ * Cloud Run (GFE) 等はクライアント送信値を保持したまま右端へ実 IP を追記するため、
+ * 右端から信頼プロキシ段数分（既定: 1）戻った要素を採用し、偽装を防止する。
  */
 export function extractClientIp(req: Request): string {
     const forwardedFor = req.headers.get("x-forwarded-for");
     if (forwardedFor) {
-        const firstIp = forwardedFor.split(",")[0]?.trim();
-        if (firstIp) {
-            return firstIp;
+        const ips = forwardedFor
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean);
+        if (ips.length > 0) {
+            const hops = getTrustedProxyHops();
+            const targetIndex = Math.max(0, ips.length - hops);
+            return ips[targetIndex];
         }
-    }
-    const realIp = req.headers.get("x-real-ip")?.trim();
-    if (realIp) {
-        return realIp;
     }
     return "unknown";
 }

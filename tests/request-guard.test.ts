@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     readBodyBytesWithLimit,
     readFormDataWithLimit,
@@ -23,31 +23,32 @@ describe("RequestGuard", () => {
         if (!res.ok) expect(res.status).toBe(413);
     });
 
-    it("aborts chunked streams (without Content-Length) exceeding byte limit", async () => {
+    it("aborts and cancels chunked streams (without Content-Length) exceeding byte limit", async () => {
+        const onCancel = vi.fn();
         let sent = 0;
         const stream = new ReadableStream<Uint8Array>({
             pull(controller) {
-                if (sent < 3) {
+                if (sent < 5) {
                     sent += 1;
                     controller.enqueue(new Uint8Array(600));
                 } else {
                     controller.close();
                 }
             },
+            cancel: onCancel,
         });
-        const req = new Request("https://example.com", {
-            method: "POST",
+        const mockReq = {
+            headers: new Headers(),
             body: stream,
-            // @ts-expect-error Node fetch duplex option
-            duplex: "half",
-        });
+        } as unknown as Request;
 
-        const result = await readBodyBytesWithLimit(req, 1024);
+        const result = await readBodyBytesWithLimit(mockReq, 1024);
         expect(result.ok).toBe(false);
         if (!result.ok) expect(result.status).toBe(413);
+        expect(onCancel).toHaveBeenCalledOnce();
     });
 
-    it("enforces application/json Content-Type (415) and parses valid JSON within limit", async () => {
+    it("enforces exact application/json media type (415) and parses valid JSON within limit", async () => {
         const wrongCt = new Request("https://example.com", {
             method: "POST",
             headers: { "content-type": "text/plain" },
@@ -56,6 +57,25 @@ describe("RequestGuard", () => {
         const ctRes = await readJsonWithLimit(wrongCt);
         expect(ctRes.ok).toBe(false);
         if (!ctRes.ok) expect(ctRes.status).toBe(415);
+
+        const spoofedCt = new Request("https://example.com", {
+            method: "POST",
+            headers: { "content-type": "text/plain; x=application/json" },
+            body: '{"a":1}',
+        });
+        const spoofedRes = await readJsonWithLimit(spoofedCt);
+        expect(spoofedRes.ok).toBe(false);
+        if (!spoofedRes.ok) expect(spoofedRes.status).toBe(415);
+
+        const charsetCt = new Request("https://example.com", {
+            method: "POST",
+            headers: { "content-type": "application/json; charset=utf-8" },
+            body: JSON.stringify({ teamNickName: "JDM" }),
+        });
+        expect(await readJsonWithLimit<{ teamNickName: string }>(charsetCt)).toEqual({
+            ok: true,
+            data: { teamNickName: "JDM" },
+        });
 
         const invalidJson = new Request("https://example.com", {
             method: "POST",
@@ -75,15 +95,31 @@ describe("RequestGuard", () => {
         expect(okRes).toEqual({ ok: true, data: { teamNickName: "JDM" } });
     });
 
-    it("enforces size limit on FormData requests", async () => {
+    it("enforces size limit on FormData requests and parses valid multipart bodies", async () => {
         const fd = new FormData();
         fd.append("teamName", "x".repeat(2000));
-        const req = new Request("https://example.com", {
+        const serialized = new Response(fd);
+        const contentType = serialized.headers.get("content-type") ?? "";
+        const rawBytes = Buffer.from(await serialized.arrayBuffer());
+
+        const tooBigReq = new Request("https://example.com", {
             method: "POST",
-            body: fd,
+            headers: { "content-type": contentType },
+            body: rawBytes,
         });
-        const tooBig = await readFormDataWithLimit(req, 100);
+        const tooBig = await readFormDataWithLimit(tooBigReq, 100);
         expect(tooBig.ok).toBe(false);
         if (!tooBig.ok) expect(tooBig.status).toBe(413);
+
+        const validReq = new Request("https://example.com", {
+            method: "POST",
+            headers: { "content-type": contentType },
+            body: rawBytes,
+        });
+        const valid = await readFormDataWithLimit(validReq, 10_000);
+        expect(valid.ok).toBe(true);
+        if (valid.ok) {
+            expect(valid.formData.get("teamName")).toBe("x".repeat(2000));
+        }
     });
 });

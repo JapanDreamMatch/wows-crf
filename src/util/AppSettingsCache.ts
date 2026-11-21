@@ -15,6 +15,7 @@ interface TimedCacheSlot<T> {
     staleRetryAt: number;
     coldErrorRetryAt: number;
     inFlight: Promise<T> | null;
+    version: number;
 }
 
 interface AppCacheStore {
@@ -35,6 +36,7 @@ function createEmptySlot<T>(): TimedCacheSlot<T> {
         staleRetryAt: 0,
         coldErrorRetryAt: 0,
         inFlight: null,
+        version: 0,
     };
 }
 
@@ -70,22 +72,29 @@ export async function readWithResilientCache<T>(
     }
 
     if (!slot.inFlight) {
+        const generation = slot.version;
         let promise: Promise<T> | null = null;
         promise = (async () => {
             try {
                 const fresh = await fetcher();
-                slot.data = fresh;
-                slot.expiresAt = Date.now() + ttlMs;
-                slot.staleRetryAt = 0;
-                slot.coldErrorRetryAt = 0;
+                if (slot.version === generation) {
+                    slot.data = fresh;
+                    slot.expiresAt = Date.now() + ttlMs;
+                    slot.staleRetryAt = 0;
+                    slot.coldErrorRetryAt = 0;
+                }
                 return fresh;
             } catch (error: unknown) {
                 if (slot.data !== null) {
-                    slot.staleRetryAt = Date.now() + STALE_COOLDOWN_MS;
+                    if (slot.version === generation) {
+                        slot.staleRetryAt = Date.now() + STALE_COOLDOWN_MS;
+                    }
                     logServerError(`${contextLabel} (serving stale)`, error);
                     return slot.data;
                 }
-                slot.coldErrorRetryAt = Date.now() + COLD_ERROR_COOLDOWN_MS;
+                if (slot.version === generation) {
+                    slot.coldErrorRetryAt = Date.now() + COLD_ERROR_COOLDOWN_MS;
+                }
                 throw error;
             } finally {
                 if (slot.inFlight === promise) {
@@ -167,6 +176,8 @@ export async function getCachedRegisterSheetNames(
 
 export function invalidateRegisterSheetNamesCache(): void {
     const slot = getCacheStore().sheetNames;
+    slot.version += 1;
+    slot.inFlight = null;
     slot.data = null;
     slot.expiresAt = 0;
     slot.staleRetryAt = 0;

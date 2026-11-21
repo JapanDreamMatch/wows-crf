@@ -77,4 +77,37 @@ describe("AppSettingsCache", () => {
         await getCachedRegisterSheetNames(namesFetcher, 10_000);
         expect(namesFetcher).toHaveBeenCalledTimes(2);
     });
+
+    it("prevents stale inFlight fetch from overwriting cache after invalidateRegisterSheetNamesCache()", async () => {
+        let resolveStale!: (names: string[]) => void;
+        let callCount = 0;
+        const fetcher = vi.fn(() => {
+            callCount += 1;
+            if (callCount === 1) {
+                return new Promise<string[]>((resolve) => {
+                    resolveStale = resolve;
+                });
+            }
+            return Promise.resolve(["@init", "JDM", "NEW1"]);
+        });
+
+        const inFlightPromise = getCachedRegisterSheetNames(fetcher, 10_000);
+        expect(fetcher).toHaveBeenCalledTimes(1);
+
+        // Invalidate while the first fetch is still in flight
+        invalidateRegisterSheetNamesCache();
+
+        // A new fetch started after invalidation must NOT share the stale inFlight promise
+        const freshResult = await getCachedRegisterSheetNames(fetcher, 10_000);
+        expect(freshResult).toEqual(["@init", "JDM", "NEW1"]);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+
+        // Resolving the stale fetch afterwards must NOT overwrite the newer cached list
+        resolveStale(["@init", "JDM"]);
+        await inFlightPromise;
+
+        const cachedAfterStaleResolve = await getCachedRegisterSheetNames(fetcher, 10_000);
+        expect(cachedAfterStaleResolve).toEqual(["@init", "JDM", "NEW1"]);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+    });
 });

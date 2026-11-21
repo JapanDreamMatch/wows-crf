@@ -4,7 +4,6 @@ import { Player } from "@/util/Player";
 import { GoogleSpreadsheetService } from "@/util/SpreadSheetService";
 import { REGISTER_HEADER } from "@/util/SheetHeader";
 import { CheckTime } from "@/app/api/isApplication/checkTime";
-import { CheckTeamAmount } from "@/app/api/isApplication/checkTeamAmount";
 import { IsIgnore } from "@/app/api/isApplication/isIgnore";
 import { CloudStorageService } from "@/util/StorageService";
 import {
@@ -19,8 +18,12 @@ import {
     MAX_PASSWORD_LENGTH,
     MIN_PASSWORD_LENGTH,
 } from "@/util/Argon2Service";
-import { withTeamLocks } from "@/util/TeamAuth";
-import { getCachedAppSettings, invalidateRegisterSheetNamesCache } from "@/util/AppSettingsCache";
+import { withSerializedLock, withTeamLock } from "@/util/TeamAuth";
+import {
+    getCachedAppSettings,
+    getCachedRegisterSheetNames,
+    invalidateRegisterSheetNamesCache,
+} from "@/util/AppSettingsCache";
 import { checkRateLimit, extractClientIp } from "@/util/RateLimiter";
 import { readFormDataWithLimit } from "@/util/RequestGuard";
 import { verifySameOriginRequest } from "@/util/OriginGuard";
@@ -160,44 +163,37 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            const lockedExec = await withTeamLocks(["__register_global__", teamNickName], async () => {
+            const lockedExec = await withTeamLock(teamNickName, async () => {
                 sendProgress?.("チーム情報の確認", 5);
 
-                // 提出期限・募集上限チェック
-                const [checkTime, checkTeamAmount, isIgnore, appSettings] = await Promise.all([
+                // 事前軽量チェック（キャッシュ利用：グローバルロック取得前に明らかな NG を弾く）
+                const [checkTime, isIgnore, appSettings, cachedSheetNames] = await Promise.all([
                     CheckTime(),
-                    CheckTeamAmount(),
                     IsIgnore(),
                     getCachedAppSettings(),
+                    getCachedRegisterSheetNames(),
                 ]);
-                if (!(isIgnore || (checkTime && checkTeamAmount))) {
+                if (!(isIgnore || checkTime)) {
                     return {
                         status: 503,
                         body: { message: "募集期間が過ぎています" },
                     };
                 }
-
-                // サーバーサイドでチーム略名の重複チェック（@を含むタブ名は除外・大文字小文字非区別）
-                const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
-                const sheetNames = await spreadSheet.getSheetNames();
-                const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
-
-                // チーム数上限チェック
-                if (!isIgnore && validSheetNames.length >= appSettings.maxTeamAmount) {
+                const cachedValidNames = cachedSheetNames.filter((name) => !name.includes("@"));
+                if (!isIgnore && cachedValidNames.length >= appSettings.maxTeamAmount) {
                     return {
                         status: 503,
                         body: { message: "募集チーム数が上限に達したため締め切りました" },
                     };
                 }
-
-                if (hasDuplicateSheetName(sheetNames, teamNickName)) {
+                if (hasDuplicateSheetName(cachedSheetNames, teamNickName)) {
                     return {
                         status: 409,
                         body: { message: "このチーム略名は既に登録されています" },
                     };
                 }
 
-                // ソルト生成 & Argon2idハッシュ計算
+                // ソルト生成 & Argon2idハッシュ計算（時間のかかる処理はグローバルロック外で実行）
                 const salt = generateSalt();
                 const hash = await hashPassword(password, salt);
 
@@ -228,80 +224,100 @@ export async function POST(req: NextRequest) {
                           teamMemberWinRate.length
                         : 0;
 
-                // ロゴ保存先ディレクトリの取得 (AppSettingsCache)
                 const logoDirectory = appSettings.logoDirectory;
 
-                // (3) アップロード → シート書き込み（失敗時はGCS＋シート双方をロールバック）
-                const storage = new CloudStorageService();
-                let uploaded: { objectName: string; url: string } | null = null;
-                let createdSheet: GoogleSpreadsheetWorksheet | null = null;
-                try {
-                    if (logoBuffer && logoType) {
-                        sendProgress?.("画像のアップロード", 82);
-                        uploaded = await storage.uploadTeamLogo(
-                            logoBuffer,
-                            logoType,
-                            teamNickName,
-                            logoDirectory
-                        );
-                    }
+                // (3) 最終クリティカルセクションのみ直列化ロックで保護
+                // （最新シート確認 → 上限/重複最終判定 → GCSアップロード → シート作成 → キャッシュ無効化）
+                return await withSerializedLock("__register_commit__", async () => {
+                    const spreadSheet = new GoogleSpreadsheetService(REGISTER_SHEET_ID ?? "");
+                    const sheetNames = await spreadSheet.getSheetNames();
+                    const validSheetNames = sheetNames.filter((name) => !name.includes("@"));
 
-                    sendProgress?.("登録情報の書き込み", 92);
-
-                    const sheetRows: (string[] | Record<string, string | number | boolean>)[] = [
-                        {
-                            Type: "TeamInfo",
-                            IGN: assertSafeSheetCellString(teamNickName),
-                            ID: assertSafeSheetCellString(teamName),
-                            WinRate: teamWinRate,
-                            Contact: assertSafeSheetCellString(contact),
-                            Comment: assertSafeSheetCellString(comment),
-                            LogoURL: assertSafeSheetCellString(uploaded?.url ?? ""), // G2セル
-                            SaltAndHash: assertSafeSheetCellString(salt),          // H2セル (Salt)
-                        },
-                    ];
-                    for (let i = 0; i < players.length; i++) {
-                        const ign = players[i].getIgn();
-                        const row: Record<string, string | number | boolean> = {
-                            Type: `player${i + 1}`,
-                            IGN: assertSafeSheetCellString(ign),
-                            ID: ign ? (players[i].getUid() ?? "undefined") : "",
-                            WinRate: ign ? (players[i].getWinRate() ?? "undefined") : "",
+                    if (!isIgnore && validSheetNames.length >= appSettings.maxTeamAmount) {
+                        return {
+                            status: 503,
+                            body: { message: "募集チーム数が上限に達したため締め切りました" },
                         };
-                        if (i === 0) {
-                            row.SaltAndHash = hash; // H3セル (Hash)
-                        } else if (i === 1) {
-                            row.SaltAndHash = 0;    // H4セル (失敗回数初期値 0)
-                        }
-                        sheetRows.push(row);
                     }
 
-                    // spreadsheetへの情報書き込み (RAW モード)
-                    createdSheet = await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
-                    await spreadSheet.addRows(teamNickName, sheetRows, { raw: true });
-                    invalidateRegisterSheetNamesCache();
-                } catch (e) {
-                    if (createdSheet) {
-                        try {
-                            await createdSheet.delete();
-                        } catch (rollbackErr) {
-                            logServerError("POST /api/register rollback sheet", rollbackErr);
-                        }
+                    if (hasDuplicateSheetName(sheetNames, teamNickName)) {
+                        return {
+                            status: 409,
+                            body: { message: "このチーム略名は既に登録されています" },
+                        };
                     }
-                    if (uploaded) {
-                        await storage.deleteObject(uploaded.objectName);
-                    }
-                    throw e;
-                }
 
-                sendProgress?.("登録完了", 100);
-                return { status: 200, body: { message: "ok" } };
+                    const storage = new CloudStorageService();
+                    let uploaded: { objectName: string; url: string } | null = null;
+                    let createdSheet: GoogleSpreadsheetWorksheet | null = null;
+                    try {
+                        if (logoBuffer && logoType) {
+                            sendProgress?.("画像のアップロード", 82);
+                            uploaded = await storage.uploadTeamLogo(
+                                logoBuffer,
+                                logoType,
+                                teamNickName,
+                                logoDirectory
+                            );
+                        }
+
+                        sendProgress?.("登録情報の書き込み", 92);
+
+                        const sheetRows: (string[] | Record<string, string | number | boolean>)[] = [
+                            {
+                                Type: "TeamInfo",
+                                IGN: assertSafeSheetCellString(teamNickName),
+                                ID: assertSafeSheetCellString(teamName),
+                                WinRate: teamWinRate,
+                                Contact: assertSafeSheetCellString(contact),
+                                Comment: assertSafeSheetCellString(comment),
+                                LogoURL: assertSafeSheetCellString(uploaded?.url ?? ""), // G2セル
+                                SaltAndHash: assertSafeSheetCellString(salt),          // H2セル (Salt)
+                            },
+                        ];
+                        for (let i = 0; i < players.length; i++) {
+                            const ign = players[i].getIgn();
+                            const row: Record<string, string | number | boolean> = {
+                                Type: `player${i + 1}`,
+                                IGN: assertSafeSheetCellString(ign),
+                                ID: ign ? (players[i].getUid() ?? "undefined") : "",
+                                WinRate: ign ? (players[i].getWinRate() ?? "undefined") : "",
+                            };
+                            if (i === 0) {
+                                row.SaltAndHash = hash; // H3セル (Hash)
+                            } else if (i === 1) {
+                                row.SaltAndHash = 0;    // H4セル (失敗回数初期値 0)
+                            }
+                            sheetRows.push(row);
+                        }
+
+                        // spreadsheetへの情報書き込み (RAW モード)
+                        createdSheet = await spreadSheet.addSheet(teamNickName, REGISTER_HEADER);
+                        await spreadSheet.addRows(teamNickName, sheetRows, { raw: true });
+                        invalidateRegisterSheetNamesCache();
+                    } catch (e) {
+                        if (createdSheet) {
+                            try {
+                                await createdSheet.delete();
+                            } catch (rollbackErr) {
+                                logServerError("POST /api/register rollback sheet", rollbackErr);
+                            }
+                        }
+                        if (uploaded) {
+                            await storage.deleteObject(uploaded.objectName);
+                        }
+                        throw e;
+                    }
+
+                    sendProgress?.("登録完了", 100);
+                    return { status: 200, body: { message: "ok" } };
+                });
             });
 
             if (lockedExec.locked) {
                 return {
                     status: 429,
-                    body: { message: "現在登録処理が混み合っています。少し待ってから再度お試しください" },
+                    body: { message: "現在同じチーム略名での登録処理が進行中です。少し待ってから再度お試しください" },
                 };
             }
 
